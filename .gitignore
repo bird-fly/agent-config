@@ -1,0 +1,4 @@
+setup.json
+state/*.json
+generated/*
+!generated/.gitkeep

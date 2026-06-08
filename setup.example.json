@@ -1,0 +1,16 @@
+{
+  "clients": {
+    "codex": {
+      "promptTarget": "C:\\Users\\16146\\.codex\\AGENTS.md",
+      "skillsTarget": "C:\\Users\\16146\\.codex\\skills"
+    },
+    "claude": {
+      "promptTarget": "C:\\Users\\16146\\.claude\\CLAUDE.md",
+      "skillsTarget": "C:\\Users\\16146\\.claude\\skills"
+    },
+    "openCode": {
+      "promptTarget": "C:\\Users\\16146\\.openCode\\AGENTS.md",
+      "skillsTarget": "C:\\Users\\16146\\.openCode\\skills"
+    }
+  }
+}
