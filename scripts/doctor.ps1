@@ -9,7 +9,8 @@ $ErrorActionPreference = "Stop"
 
 function Get-FullPath {
   param([Parameter(Mandatory = $true)][string]$Path)
-  return [System.IO.Path]::GetFullPath($Path)
+  $expandedPath = [Environment]::ExpandEnvironmentVariables($Path)
+  return [System.IO.Path]::GetFullPath($expandedPath)
 }
 
 function Resolve-ConfigPath {

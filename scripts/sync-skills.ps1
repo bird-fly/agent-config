@@ -11,7 +11,8 @@ $ErrorActionPreference = "Stop"
 
 function Get-FullPath {
   param([Parameter(Mandatory = $true)][string]$Path)
-  return [System.IO.Path]::GetFullPath($Path)
+  $expandedPath = [Environment]::ExpandEnvironmentVariables($Path)
+  return [System.IO.Path]::GetFullPath($expandedPath)
 }
 
 function Resolve-ConfigPath {
@@ -89,6 +90,94 @@ function Write-Utf8NoBom {
   [System.IO.File]::WriteAllText($Path, $Content, [System.Text.UTF8Encoding]::new($false))
 }
 
+function Unquote-MetadataValue {
+  param([Parameter(Mandatory = $true)][string]$Value)
+
+  $trimmed = $Value.Trim()
+  if ($trimmed.Length -ge 2) {
+    $first = $trimmed.Substring(0, 1)
+    $last = $trimmed.Substring($trimmed.Length - 1, 1)
+    if (($first -eq '"' -and $last -eq '"') -or ($first -eq "'" -and $last -eq "'")) {
+      return $trimmed.Substring(1, $trimmed.Length - 2)
+    }
+  }
+
+  return $trimmed
+}
+
+function Get-SkillNameFromFile {
+  param([Parameter(Mandatory = $true)][string]$Path)
+
+  $lines = Get-Content -LiteralPath $Path
+  $inFrontmatter = $false
+  $frontmatterStarted = $false
+
+  foreach ($line in $lines) {
+    if ($line.Trim() -eq "---") {
+      if (-not $frontmatterStarted) {
+        $frontmatterStarted = $true
+        $inFrontmatter = $true
+        continue
+      }
+
+      if ($inFrontmatter) {
+        break
+      }
+    }
+
+    if ($frontmatterStarted -and -not $inFrontmatter) {
+      break
+    }
+
+    if ($frontmatterStarted -and $inFrontmatter -and $line -match "^\s*name\s*:\s*(.+?)\s*$") {
+      return (Unquote-MetadataValue -Value $matches[1])
+    }
+  }
+
+  return $null
+}
+
+function Assert-SkillNameMatches {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$SkillName,
+    [Parameter(Mandatory = $true)]
+    [string]$SkillFile
+  )
+
+  $declaredName = Get-SkillNameFromFile -Path $SkillFile
+  if (-not $declaredName) {
+    throw "Missing skill metadata name in: $SkillFile"
+  }
+
+  if ($declaredName -ne $SkillName) {
+    throw "Skill directory '$SkillName' must match SKILL.md name '$declaredName': $SkillFile"
+  }
+}
+
+function Assert-ManagedSkillDestination {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$Destination,
+    [Parameter(Mandatory = $true)]
+    [string]$SkillName
+  )
+
+  if (-not (Test-Path -LiteralPath $Destination)) {
+    return
+  }
+
+  $destinationSkillFile = Join-Path $Destination "SKILL.md"
+  if (-not (Test-Path -LiteralPath $destinationSkillFile)) {
+    throw "Refusing to replace unmanaged destination: $Destination"
+  }
+
+  $declaredName = Get-SkillNameFromFile -Path $destinationSkillFile
+  if ($declaredName -ne $SkillName) {
+    throw "Refusing to replace unmanaged destination: $Destination"
+  }
+}
+
 $repoRootFull = Get-FullPath $RepoRoot
 $configPathFull = Resolve-ConfigPath -Root $repoRootFull -RequestedPath $ConfigPath
 if (-not (Test-Path -LiteralPath $configPathFull)) {
@@ -136,8 +225,10 @@ foreach ($clientDir in $clientDirs) {
     if (-not (Test-Path -LiteralPath $skillFile)) {
       throw "Missing shared skill file: $skillFile"
     }
+    Assert-SkillNameMatches -SkillName $skillName -SkillFile $skillFile
 
     $destination = Join-Path $skillsTarget $skillName
+    Assert-ManagedSkillDestination -Destination $destination -SkillName $skillName
     $result = & $linkOrCopyScript -Source $source -Destination $destination -Mode $Mode
     $modeUsed = ($result | Select-Object -Last 1).mode
     if (-not $modeUsed) {

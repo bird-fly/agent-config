@@ -45,10 +45,33 @@ function Assert-NotContains {
   }
 }
 
+function Restore-TestState {
+  if ($script:stateBackupExists) {
+    [System.IO.File]::WriteAllText($script:statePath, $script:stateBackupContent, [System.Text.UTF8Encoding]::new($false))
+    return
+  }
+
+  if (Test-Path -LiteralPath $script:statePath) {
+    Remove-Item -LiteralPath $script:statePath -Force
+  }
+}
+
 $repoRootFull = [System.IO.Path]::GetFullPath($RepoRoot)
 $testRoot = Join-Path $repoRootFull "generated/_test-targets"
 $testRootFull = [System.IO.Path]::GetFullPath($testRoot)
 $generatedRootFull = [System.IO.Path]::GetFullPath((Join-Path $repoRootFull "generated"))
+$unexpandedEnvTarget = Join-Path $repoRootFull "%AGENT_CONFIG_TEST_ROOT%"
+$script:statePath = Join-Path $repoRootFull "state/install-map.json"
+$script:stateBackupExists = Test-Path -LiteralPath $script:statePath
+$script:stateBackupContent = $null
+if ($script:stateBackupExists) {
+  $script:stateBackupContent = [System.IO.File]::ReadAllText($script:statePath)
+}
+
+trap {
+  Restore-TestState
+  throw
+}
 
 if (-not $testRootFull.StartsWith($generatedRootFull, [System.StringComparison]::OrdinalIgnoreCase)) {
   throw "Refusing to clean unexpected test directory: $testRootFull"
@@ -57,8 +80,12 @@ if (-not $testRootFull.StartsWith($generatedRootFull, [System.StringComparison]:
 if (Test-Path -LiteralPath $testRootFull) {
   Remove-Item -LiteralPath $testRootFull -Recurse -Force
 }
+if (Test-Path -LiteralPath $unexpandedEnvTarget) {
+  Remove-Item -LiteralPath $unexpandedEnvTarget -Recurse -Force
+}
 
 New-Item -ItemType Directory -Force -Path $testRootFull | Out-Null
+$env:AGENT_CONFIG_TEST_ROOT = $testRootFull
 
 $configPath = Join-Path $testRootFull "setup.test.json"
 $importSourceA = Join-Path $testRootFull "installed-a"
@@ -74,16 +101,16 @@ New-Item -ItemType Directory -Force -Path $nestedWrongRoot | Out-Null
 $config = @{
   clients = @{
     codex = @{
-      promptTarget = Join-Path $testRootFull "codex/AGENTS.md"
-      skillsTarget = Join-Path $testRootFull "codex/skills"
+      promptTarget = "%AGENT_CONFIG_TEST_ROOT%/codex/AGENTS.md"
+      skillsTarget = "%AGENT_CONFIG_TEST_ROOT%/codex/skills"
     }
     claude = @{
-      promptTarget = Join-Path $testRootFull "claude/CLAUDE.md"
-      skillsTarget = Join-Path $testRootFull "claude/skills"
+      promptTarget = "%AGENT_CONFIG_TEST_ROOT%/claude/CLAUDE.md"
+      skillsTarget = "%AGENT_CONFIG_TEST_ROOT%/claude/skills"
     }
     openCode = @{
-      promptTarget = Join-Path $testRootFull "openCode/AGENTS.md"
-      skillsTarget = Join-Path $testRootFull "openCode/skills"
+      promptTarget = "%AGENT_CONFIG_TEST_ROOT%/openCode/AGENTS.md"
+      skillsTarget = "%AGENT_CONFIG_TEST_ROOT%/openCode/skills"
     }
   }
 }
@@ -124,6 +151,10 @@ $repoLocalSkill = Join-Path $repoLocalImportSource "repo-root-fallback-test"
 New-Item -ItemType Directory -Force -Path $repoLocalSkill | Out-Null
 [System.IO.File]::WriteAllText((Join-Path $repoLocalSkill "SKILL.md"), "---`nname: repo-root-fallback-test`n---`n# Repo Root Fallback`n", [System.Text.UTF8Encoding]::new($false))
 
+$mismatchedSkill = Join-Path $importSourceA "import-test-mismatch"
+New-Item -ItemType Directory -Force -Path $mismatchedSkill | Out-Null
+[System.IO.File]::WriteAllText((Join-Path $mismatchedSkill "SKILL.md"), "---`nname: different-skill-name`n---`n# Mismatch`n", [System.Text.UTF8Encoding]::new($false))
+
 & (Join-Path $repoRootFull "scripts/import-installed-skills.ps1") `
   -RepoRoot $repoRootFull `
   -SourcePaths @($importSourceA, $importSourceB) `
@@ -154,6 +185,9 @@ Assert-PathExists (Join-Path $fallbackRepoRoot "shared/skills/repo-root-fallback
 Assert-PathExists (Join-Path $importSharedSkills "import-test-alpha/SKILL.md")
 Assert-Contains (Join-Path $importSharedSkills "import-test-alpha/SKILL.md") "Alpha A"
 Assert-Contains (Join-Path $importSharedSkills "design-taste-frontend/SKILL.md") "name: design-taste-frontend"
+if (Test-Path -LiteralPath (Join-Path $importSharedSkills "import-test-mismatch")) {
+  throw "Expected skill import to skip directories whose SKILL.md name does not match the directory name."
+}
 
 foreach ($clientName in $clientNames) {
   $manifestPath = Join-Path $importClients "$clientName/skills.manifest.json"
@@ -195,5 +229,66 @@ Assert-Contains $claudeSkill "Anti-Slop Frontend Skill"
 
 Assert-PathExists (Join-Path $testRootFull "codex/AGENTS.md")
 Assert-PathExists (Join-Path $testRootFull "claude/CLAUDE.md")
+if (Test-Path -LiteralPath $unexpandedEnvTarget) {
+  throw "Expected setup paths to expand environment variables instead of writing to: $unexpandedEnvTarget"
+}
 
+$unsafeSkillTarget = Join-Path $testRootFull "unsafe-target"
+New-Item -ItemType Directory -Force -Path (Join-Path $unsafeSkillTarget "design-taste-frontend") | Out-Null
+[System.IO.File]::WriteAllText(
+  (Join-Path $unsafeSkillTarget "design-taste-frontend/README.md"),
+  "existing non-skill content",
+  [System.Text.UTF8Encoding]::new($false)
+)
+
+$unsafeConfig = @{
+  clients = @{
+    codex = @{
+      promptTarget = Join-Path $testRootFull "unsafe-codex/AGENTS.md"
+      skillsTarget = $unsafeSkillTarget
+    }
+  }
+}
+$unsafeConfigPath = Join-Path $testRootFull "setup.unsafe.json"
+[System.IO.File]::WriteAllText($unsafeConfigPath, ($unsafeConfig | ConvertTo-Json -Depth 8), [System.Text.UTF8Encoding]::new($false))
+
+$unsafeFailed = $false
+try {
+  & (Join-Path $repoRootFull "scripts/sync-skills.ps1") -RepoRoot $repoRootFull -ConfigPath $unsafeConfigPath -Mode Copy
+} catch {
+  $unsafeFailed = $true
+  if ($_.Exception.Message -notlike "*Refusing to replace unmanaged destination*") {
+    throw
+  }
+}
+if (-not $unsafeFailed) {
+  throw "Expected sync-skills to refuse replacing an existing unmanaged skill destination."
+}
+Assert-PathExists (Join-Path $unsafeSkillTarget "design-taste-frontend/README.md")
+
+$unsafePromptConfig = @{
+  clients = @{
+    codex = @{
+      promptTarget = Join-Path $testRootFull "unsafe-codex/not-agents.txt"
+      skillsTarget = Join-Path $testRootFull "unsafe-codex/skills"
+    }
+  }
+}
+$unsafePromptConfigPath = Join-Path $testRootFull "setup.unsafe-prompt.json"
+[System.IO.File]::WriteAllText($unsafePromptConfigPath, ($unsafePromptConfig | ConvertTo-Json -Depth 8), [System.Text.UTF8Encoding]::new($false))
+
+$unsafePromptFailed = $false
+try {
+  & (Join-Path $repoRootFull "scripts/build-prompts.ps1") -RepoRoot $repoRootFull -ConfigPath $unsafePromptConfigPath
+} catch {
+  $unsafePromptFailed = $true
+  if ($_.Exception.Message -notlike "*Prompt target for codex must end with AGENTS.md*") {
+    throw
+  }
+}
+if (-not $unsafePromptFailed) {
+  throw "Expected build-prompts to refuse an unexpected prompt target file name."
+}
+
+Restore-TestState
 Write-Host "agent-config script tests passed."

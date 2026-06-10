@@ -10,7 +10,8 @@ $ErrorActionPreference = "Stop"
 
 function Get-FullPath {
   param([Parameter(Mandatory = $true)][string]$Path)
-  return [System.IO.Path]::GetFullPath($Path)
+  $expandedPath = [Environment]::ExpandEnvironmentVariables($Path)
+  return [System.IO.Path]::GetFullPath($expandedPath)
 }
 
 function Test-AgentConfigRoot {
@@ -62,6 +63,53 @@ function Read-JsonFile {
   return (Get-Content -Raw -LiteralPath $Path | ConvertFrom-Json)
 }
 
+function Unquote-MetadataValue {
+  param([Parameter(Mandatory = $true)][string]$Value)
+
+  $trimmed = $Value.Trim()
+  if ($trimmed.Length -ge 2) {
+    $first = $trimmed.Substring(0, 1)
+    $last = $trimmed.Substring($trimmed.Length - 1, 1)
+    if (($first -eq '"' -and $last -eq '"') -or ($first -eq "'" -and $last -eq "'")) {
+      return $trimmed.Substring(1, $trimmed.Length - 2)
+    }
+  }
+
+  return $trimmed
+}
+
+function Get-SkillNameFromFile {
+  param([Parameter(Mandatory = $true)][string]$Path)
+
+  $lines = Get-Content -LiteralPath $Path
+  $inFrontmatter = $false
+  $frontmatterStarted = $false
+
+  foreach ($line in $lines) {
+    if ($line.Trim() -eq "---") {
+      if (-not $frontmatterStarted) {
+        $frontmatterStarted = $true
+        $inFrontmatter = $true
+        continue
+      }
+
+      if ($inFrontmatter) {
+        break
+      }
+    }
+
+    if ($frontmatterStarted -and -not $inFrontmatter) {
+      break
+    }
+
+    if ($frontmatterStarted -and $inFrontmatter -and $line -match "^\s*name\s*:\s*(.+?)\s*$") {
+      return (Unquote-MetadataValue -Value $matches[1])
+    }
+  }
+
+  return $null
+}
+
 function Get-DefaultSkillSources {
   $homeDir = [Environment]::GetFolderPath("UserProfile")
   return @(
@@ -84,9 +132,16 @@ function Get-SkillDirectories {
     Get-ChildItem -LiteralPath $sourcePath -Directory | Sort-Object Name | ForEach-Object {
       $skillFile = Join-Path $_.FullName "SKILL.md"
       if (Test-Path -LiteralPath $skillFile) {
-        [pscustomobject]@{
-          name = $_.Name
-          path = $_.FullName
+        $declaredName = Get-SkillNameFromFile -Path $skillFile
+        if (-not $declaredName) {
+          Write-Host "Skipping skill with missing metadata name: $($_.FullName)"
+        } elseif ($declaredName -ne $_.Name) {
+          Write-Host "Skipping skill with mismatched directory/name metadata: $($_.FullName)"
+        } else {
+          [pscustomobject]@{
+            name = $_.Name
+            path = $_.FullName
+          }
         }
       } else {
         Write-Host "Skipping non-skill directory: $($_.FullName)"

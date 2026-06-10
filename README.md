@@ -53,6 +53,8 @@ Or do both in one command:
 
 The importer only treats directories containing `SKILL.md` as skills. If the same skill name appears in multiple source folders, the first one wins and later duplicates are skipped. If a skill already exists in `shared/skills/`, it is kept and only the manifests are updated.
 
+Paths in `setup.json` may use Windows environment variables such as `%USERPROFILE%`. Prompt targets are validated against the expected client file name, and skill sync refuses to replace an existing destination unless it already looks like the same managed skill.
+
 ---
 
 # 中文说明
@@ -84,10 +86,10 @@ cd E:\Project\codexProject\agent-config
 自动扫描这些目录：
 
 ```text
-C:\Users\16146\.agents\skills
-C:\Users\16146\.codex\skills
-C:\Users\16146\.claude\skills
-C:\Users\16146\.openCode\skills
+%USERPROFILE%\.agents\skills
+%USERPROFILE%\.codex\skills
+%USERPROFILE%\.claude\skills
+%USERPROFILE%\.openCode\skills
 ```
 
 导入到 `shared/skills/`：
@@ -106,6 +108,7 @@ C:\Users\16146\.openCode\skills
 导入规则：
 
 - 只有包含 `SKILL.md` 的目录才算 skill。
+- `SKILL.md` 中的 `name:` 必须和目录名一致，否则跳过。
 - 同名 skill 会过滤，先扫描到的版本保留。
 - 如果 `shared/skills/<skill-name>` 已存在，不覆盖，只更新 manifest。
 - 导入后会自动追加到每个客户端的 `skills.manifest.json`。
@@ -173,3 +176,4 @@ shared/skills/<skill-name>/SKILL.md
 
 - Treat `generated/` as build output. Edit `shared/` and `clients/` instead.
 - On Windows, file prompts default to copy deployment; skill directories can use link-or-copy.
+- Use `%USERPROFILE%` in local setup paths instead of hard-coded user profile directories.

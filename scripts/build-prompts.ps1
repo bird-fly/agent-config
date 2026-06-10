@@ -9,7 +9,8 @@ $ErrorActionPreference = "Stop"
 
 function Get-FullPath {
   param([Parameter(Mandatory = $true)][string]$Path)
-  return [System.IO.Path]::GetFullPath($Path)
+  $expandedPath = [Environment]::ExpandEnvironmentVariables($Path)
+  return [System.IO.Path]::GetFullPath($expandedPath)
 }
 
 function Resolve-ConfigPath {
@@ -140,6 +141,22 @@ function Get-PromptFileName {
   return "AGENTS.md"
 }
 
+function Assert-PromptTarget {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$ClientName,
+    [Parameter(Mandatory = $true)]
+    [string]$Path,
+    [Parameter(Mandatory = $true)]
+    [string]$ExpectedFileName
+  )
+
+  $leaf = Split-Path -Leaf $Path
+  if ($leaf -ne $ExpectedFileName) {
+    throw "Prompt target for $ClientName must end with $ExpectedFileName`: $Path"
+  }
+}
+
 $repoRootFull = Get-FullPath $RepoRoot
 $configPathFull = Resolve-ConfigPath -Root $repoRootFull -RequestedPath $ConfigPath
 if (-not (Test-Path -LiteralPath $configPathFull)) {
@@ -185,6 +202,7 @@ foreach ($clientDir in $clientDirs) {
   $promptTargetValue = Get-ObjectProperty -Object $clientConfig -Name "promptTarget"
   if ($promptTargetValue) {
     $promptTarget = Get-FullPath $promptTargetValue
+    Assert-PromptTarget -ClientName $clientName -Path $promptTarget -ExpectedFileName $promptFileName
     Write-Utf8NoBom -Path $promptTarget -Content $content
     Write-Host "Generated and deployed $clientName prompt: $promptTarget"
   } else {
