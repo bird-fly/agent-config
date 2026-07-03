@@ -30,6 +30,10 @@
     "verification-before-completion",
     "writing-plans",
     "writing-skills",
-    "multica-local-development"
+    "multica-agent-invoker",
+    "multica-issue-clarifier",
+    "multica-issue-creator",
+    "multica-issue-intake",
+    "multica-issue-updater"
   ]
 }

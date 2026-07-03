@@ -227,6 +227,28 @@ Assert-PathExists $claudeSkill
 Assert-Contains $codexSkill "FINAL PRE-FLIGHT CHECK"
 Assert-Contains $claudeSkill "Anti-Slop Frontend Skill"
 
+$extraCodexSkill = Join-Path $testRootFull "codex/skills/local-only-skill"
+New-Item -ItemType Directory -Force -Path $extraCodexSkill | Out-Null
+[System.IO.File]::WriteAllText(
+  (Join-Path $extraCodexSkill "SKILL.md"),
+  "---`nname: local-only-skill`n---`n# Local Only`n",
+  [System.Text.UTF8Encoding]::new($false)
+)
+
+$extraCodexSystemDir = Join-Path $testRootFull "codex/skills/.system"
+New-Item -ItemType Directory -Force -Path $extraCodexSystemDir | Out-Null
+[System.IO.File]::WriteAllText(
+  (Join-Path $extraCodexSystemDir "README.md"),
+  "system-managed non-skill directory",
+  [System.Text.UTF8Encoding]::new($false)
+)
+
+& (Join-Path $repoRootFull "scripts/sync-skills.ps1") -RepoRoot $repoRootFull -ConfigPath $configPath -Mode Copy
+if (Test-Path -LiteralPath $extraCodexSkill) {
+  throw "Expected sync-skills to remove manifest-excluded local skill: $extraCodexSkill"
+}
+Assert-PathExists (Join-Path $extraCodexSystemDir "README.md")
+
 Assert-PathExists (Join-Path $testRootFull "codex/AGENTS.md")
 Assert-PathExists (Join-Path $testRootFull "claude/CLAUDE.md")
 if (Test-Path -LiteralPath $unexpandedEnvTarget) {

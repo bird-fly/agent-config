@@ -178,6 +178,68 @@ function Assert-ManagedSkillDestination {
   }
 }
 
+function Assert-SafeSkillsTarget {
+  param([Parameter(Mandatory = $true)][string]$Path)
+
+  $fullPath = Get-FullPath $Path
+  $root = [System.IO.Path]::GetPathRoot($fullPath)
+  $leaf = Split-Path -Leaf $fullPath
+
+  if ([string]::IsNullOrWhiteSpace($leaf)) {
+    throw "Skills target must not be a drive root: $fullPath"
+  }
+
+  if ($fullPath -eq $root) {
+    throw "Skills target must not be a drive root: $fullPath"
+  }
+}
+
+function Remove-ManifestExcludedSkills {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$SkillsTarget,
+    [Parameter(Mandatory = $true)]
+    [string[]]$ManifestSkillNames,
+    [Parameter(Mandatory = $true)]
+    [string]$ClientName
+  )
+
+  if (-not (Test-Path -LiteralPath $SkillsTarget)) {
+    return
+  }
+
+  Assert-SafeSkillsTarget -Path $SkillsTarget
+
+  $manifestSet = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+  foreach ($skillName in $ManifestSkillNames) {
+    if (-not [string]::IsNullOrWhiteSpace($skillName)) {
+      [void]$manifestSet.Add($skillName)
+    }
+  }
+
+  $localSkillDirs = Get-ChildItem -LiteralPath $SkillsTarget -Directory | Sort-Object Name
+  foreach ($localSkillDir in $localSkillDirs) {
+    if ($manifestSet.Contains($localSkillDir.Name)) {
+      continue
+    }
+
+    $localSkillFile = Join-Path $localSkillDir.FullName "SKILL.md"
+    if (-not (Test-Path -LiteralPath $localSkillFile)) {
+      Write-Host "Skipping $clientName manifest-excluded non-skill directory '$($localSkillDir.Name)'."
+      continue
+    }
+
+    $declaredName = Get-SkillNameFromFile -Path $localSkillFile
+    if ($declaredName -ne $localSkillDir.Name) {
+      Write-Host "Skipping $clientName manifest-excluded directory with mismatched skill metadata '$($localSkillDir.Name)'."
+      continue
+    }
+
+    Remove-Item -LiteralPath $localSkillDir.FullName -Recurse -Force
+    Write-Host "Removed $clientName manifest-excluded local skill '$($localSkillDir.Name)'."
+  }
+}
+
 $repoRootFull = Get-FullPath $RepoRoot
 $configPathFull = Resolve-ConfigPath -Root $repoRootFull -RequestedPath $ConfigPath
 if (-not (Test-Path -LiteralPath $configPathFull)) {
@@ -214,8 +276,11 @@ foreach ($clientDir in $clientDirs) {
   $skillsTarget = Get-FullPath $skillsTargetValue
   $manifest = Read-JsonFile $manifestPath
   $skillState = [ordered]@{}
+  $manifestSkillNames = @($manifest.skills)
 
-  foreach ($skillName in $manifest.skills) {
+  Remove-ManifestExcludedSkills -SkillsTarget $skillsTarget -ManifestSkillNames $manifestSkillNames -ClientName $clientName
+
+  foreach ($skillName in $manifestSkillNames) {
     if ([string]::IsNullOrWhiteSpace($skillName)) {
       throw "Empty skill name in manifest: $manifestPath"
     }

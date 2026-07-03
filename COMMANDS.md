@@ -8,7 +8,7 @@ cd F:\AI\agent-config
 
 ## 首次安装或新电脑
 
-使用项目内的规则和 skills 初始化当前用户的 Codex、Claude Code、openCode：
+使用项目内的规则和 skills 初始化或重置当前用户的 Codex、Claude Code、openCode：
 
 ```powershell
 .\setup.ps1 -Mode Copy
@@ -30,7 +30,7 @@ notepad setup.json
 
 ## 覆盖本机已安装 skills
 
-用本项目 `shared/skills/` 中的版本覆盖客户端目录里已有的同名 skills：
+用本项目 `shared/skills/` 和 `clients/<client>/skills.manifest.json` 覆盖客户端 skills 目录，让本机以项目为准：
 
 ```powershell
 .\setup.ps1 -Mode Copy
@@ -40,7 +40,8 @@ notepad setup.json
 
 - 目标目录不存在：直接复制。
 - 目标目录已有同名 skill，且 `SKILL.md` 的 `name:` 匹配：覆盖为项目版本。
-- 目标目录没有 `SKILL.md`，或 `name:` 不匹配：拒绝覆盖，避免误删非 skill 内容。
+- 目标目录里存在 manifest 外的本地 skill，且 `SKILL.md` 的 `name:` 和目录名一致：删除。
+- 目标目录里存在系统目录、没有 `SKILL.md` 的目录，或 `name:` 不匹配的目录：跳过，避免误删非 skill 内容。
 
 ## 导入本机已有 skills 到项目
 
@@ -107,7 +108,7 @@ notepad setup.json
 
 说明：
 
-- `Copy`：删除并复制目标 skill 目录，最稳定。
+- `Copy`：删除并复制 manifest 内的目标 skill 目录，最稳定；同时清理 manifest 外的本地 skill。
 - `Auto`：优先创建 Junction/HardLink，失败后复制。
 - `Link`：只尝试链接；链接失败会报错。
 

@@ -6,7 +6,7 @@ Shared agent configuration repo for Codex, Claude Code, and future clients such 
 
 - Maintain one source of truth for shared rules and custom skills.
 - Generate client-specific prompt entry files such as `AGENTS.md` and `CLAUDE.md`.
-- Sync shared skills into each client's expected local directory.
+- Sync shared skills into each client's expected local directory, using the project manifest as the source of truth.
 - Prefer links where safe, fall back to copy on Windows.
 
 ## Layout
@@ -30,7 +30,7 @@ Run from the repo root:
 ## Scripts
 
 - `scripts/build-prompts.ps1`: builds `generated/<client>/AGENTS.md` or `CLAUDE.md` from `shared/rules/*.md` plus `clients/<client>/rules/*.md`, then deploys prompt files to configured targets.
-- `scripts/sync-skills.ps1`: syncs manifest-listed skills from `shared/skills/` into each configured client skills directory.
+- `scripts/sync-skills.ps1`: syncs manifest-listed skills from `shared/skills/` into each configured client skills directory and removes local skills that are not listed in the manifest.
 - `scripts/link-or-copy.ps1`: tries directory links by default and falls back to copy; pass `-Mode Copy` for deterministic copy deployment.
 - `scripts/import-installed-skills.ps1`: scans installed skill folders, imports unique skills into `shared/skills/`, and appends them to every client manifest.
 - `scripts/doctor.ps1`: checks source layout, generated prompts, configured prompt targets, synced skills, and `state/install-map.json`.
@@ -53,7 +53,7 @@ Or do both in one command:
 
 The importer only treats directories containing `SKILL.md` as skills. If the same skill name appears in multiple source folders, the first one wins and later duplicates are skipped. If a skill already exists in `shared/skills/`, it is kept and only the manifests are updated.
 
-Paths in `setup.json` may use Windows environment variables such as `%USERPROFILE%`. Prompt targets are validated against the expected client file name, and skill sync refuses to replace an existing destination unless it already looks like the same managed skill.
+Paths in `setup.json` may use Windows environment variables such as `%USERPROFILE%`. Prompt targets are validated against the expected client file name, and skill sync treats each client manifest as authoritative. It overwrites same-name skills with the project version, removes extra local skill directories whose `SKILL.md` metadata matches their directory name, skips non-skill directories such as system folders, and refuses to overwrite unmanaged same-name destinations.
 
 ---
 
@@ -79,7 +79,7 @@ cd E:\Project\codexProject\agent-config
 .\setup.ps1 -Mode Copy
 ```
 
-这会生成 prompt、同步 skills，并运行 doctor 校验。
+这会生成 prompt、同步 skills，并运行 doctor 校验。同步 skills 时以项目 manifest 为准：项目里有的会覆盖到本机，项目 manifest 里没有的本机 skill 会被删除；系统目录、没有 `SKILL.md` 的目录、metadata 不匹配的目录会跳过，避免误删非 skill 内容。
 
 ## 导入已安装 skills
 
