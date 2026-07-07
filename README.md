@@ -16,6 +16,32 @@ Shared agent configuration repo for Codex, Claude Code, and future clients such 
 - `generated/`: built output files for each client.
 - `scripts/`: helper scripts used by `setup.ps1`.
 - `state/`: local install metadata and last-known sync mode.
+- `docs/`: documentation and guides.
+
+## 🆕 技能管理系统 (New!)
+
+下载了很多技能不知道如何管理？我们提供了完整的技能管理工具：
+
+- 📊 **自动分析工具** - 识别技能分类、依赖关系和启用状态
+- 📖 **分类文档** - 完整的技能目录和说明
+- 🎯 **快速参考** - 一页纸搞定常用操作
+
+**快速开始：**
+```powershell
+# 查看技能分析报告
+node scripts\analyze-skills.js
+
+# 查看完整文档
+Get-Content README_SKILLS.md
+```
+
+**相关文档：**
+- [技能管理入门](README_SKILLS.md) - 从这里开始
+- [快速参考卡](SKILLS_QUICK_REFERENCE.md) - 常用命令速查
+- [完整分类目录](SKILLS_CATALOG.md) - 所有技能列表
+- [详细管理指南](docs/SKILLS_MANAGEMENT.md) - 深入指南
+
+---
 
 ## Bootstrap
 

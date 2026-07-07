@@ -2,7 +2,7 @@
 
 ## 双模式智能切换
 - **简单模式**（默认）：简短直接，minimal-code。对付bug/小改/日常
-- **复杂模式**：Superpowers 流程 + 关键环节用 mattpocock 技能（`/grill-me` 澄清需求、`/diagnose` 排bug、`/improve-codebase-architecture` 做架构、`/code-review` 审查）
+- **复杂模式**：关键环节用 mattpocock 技能（`/grill-me` 澄清需求、`/diagnose` 排bug、`/improve-codebase-architecture` 做架构、`/code-review` 审查）
 - 触发词「简单/快速/小改/修复/bug/优化」→简单模式；「架构/规划/重构/设计/新功能/复杂」→复杂模式
 
 ## Karpathy 编码准则(/karpathy-guidelines)

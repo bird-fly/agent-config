@@ -6,6 +6,56 @@
 cd F:\AI\agent-config
 ```
 
+## 📚 技能管理命令 (新增)
+
+### 查看技能来源和归属
+```powershell
+# 方式1: 使用 Node.js 分析工具（推荐）
+node scripts\analyze-skills.js
+
+# 查看特定技能详情
+node scripts\analyze-skills.js --skill grill-me
+
+# 显示详细来源列表
+node scripts\analyze-skills.js --verbose
+
+# 方式2: 使用 PowerShell 快速查询
+.\scripts\skill-source.ps1 grill-me           # 查看单个技能
+.\scripts\skill-source.ps1 -All               # 列出所有技能
+.\scripts\skill-source.ps1 -BySource          # 按来源分组
+.\scripts\skill-source.ps1 -Interactive       # 交互模式
+
+# 查看完整分类文档
+Get-Content SKILLS_CATALOG.md
+```
+
+### 管理技能启用/禁用
+```powershell
+# 编辑客户端技能配置
+# Claude Code
+notepad clients\claude\skills.manifest.json
+
+# Codex
+notepad clients\codex\skills.manifest.json
+
+# OpenCode
+notepad clients\openCode\skills.manifest.json
+```
+
+### 查看技能详情
+```powershell
+# 查看特定技能的文档
+Get-Content shared\skills\{skill-name}\SKILL.md
+
+# 示例：查看 grill-me 技能
+Get-Content shared\skills\grill-me\SKILL.md
+
+# 查看所有技能列表
+Get-ChildItem shared\skills -Directory | Select-Object Name
+```
+
+---
+
 ## 首次安装或新电脑
 
 使用项目内的规则和 skills 初始化或重置当前用户的 Codex、Claude Code、openCode：
