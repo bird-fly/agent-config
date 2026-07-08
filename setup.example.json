@@ -14,10 +14,10 @@
     }
   },
   "plugins": {
-    "description": "控制哪些插件被同步。设置为 false 可禁用插件。未列出的插件默认启用。",
+    "description": "控制哪些插件被同步。设置为 false 可禁用插件。未列出的插件默认启用。插件存储在 %USERPROFILE%\\.localAi\\plugins",
     "understand-anything": true
   },
   "skillSyncModes": {
-    "description": "指定特定技能的同步模式（Link 或 Copy）。未指定的技能使用全局 Mode 参数。注意：插件技能（如 understand 系列）通过 sync-plugins.ps1 管理，不需要在此配置。"
+    "description": "指定特定技能的同步模式（Link 或 Copy）。Copy模式：直接复制到平台。Link模式：复制到 %USERPROFILE%\\.localAi\\skills，再链接到平台。注意：插件技能（如 understand 系列）通过 sync-plugins.ps1 管理，不需要在此配置。"
   }
 }

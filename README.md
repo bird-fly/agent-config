@@ -26,29 +26,29 @@
 git clone --recursive https://github.com/bird-fly/agent-config.git
 cd agent-config
 
-# 安装 Understand-Anything 完整插件（Codex/OpenCode）
+# 同步插件到统一管理中心（Codex/OpenCode）
 .\scripts\install-understand-plugin.ps1 -Platform all
 
-# 同步插件到统一管理中心（默认复制模式，删除项目后仍可用）
+# 同步插件到统一管理中心（插件始终复制，删除项目后仍可用）
 .\scripts\sync-plugins.ps1
 
 # 首次设置（生成 prompt 并同步技能）
 .\setup.ps1 -Mode Copy
 ```
 
-**插件管理**: 所有插件集中存储在 `%USERPROFILE%\.localAIPlugins`，各平台通过符号链接引用技能，实现统一管理。默认使用复制模式，删除项目后插件仍然可用。📖 [详细说明](docs/PLUGIN_MANAGEMENT_CENTER.md)
+**插件管理**: 所有插件集中存储在 `%USERPROFILE%\.localAi\plugins`（始终复制，删除项目后仍可用），各平台通过符号链接引用技能。📖 [详细说明](docs/PLUGIN_MANAGEMENT_CENTER.md)
 
 ### 日常使用
 
 ```powershell
-# 同步插件到管理中心（默认复制，删除项目后仍可用）
+# 同步插件到管理中心（插件始终复制）
 .\scripts\sync-plugins.ps1
-
-# 使用符号链接模式（节省空间，但需保留项目）
-.\scripts\sync-plugins.ps1 -Mode Link
 
 # 修改规则或技能后，重新同步
 .\setup.ps1 -Mode Copy
+
+# 技能使用 Link 模式（先复制到 .localAi/skills，再链接）
+.\setup.ps1 -Mode Link
 
 # 使用配置文件指定每个技能的同步模式
 # 编辑 setup.json，在 skillSyncModes 中配置

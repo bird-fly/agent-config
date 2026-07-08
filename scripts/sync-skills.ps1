@@ -3,7 +3,8 @@ param(
   [string]$RepoRoot,
   [string]$ConfigPath = $null,
   [ValidateSet("Auto", "Link", "Copy")]
-  [string]$Mode = "Auto"
+  [string]$Mode = "Auto",
+  [string]$SkillCenterPath = "$env:USERPROFILE\.localAi\skills"  # 新增：技能中心路径
 )
 
 Set-StrictMode -Version Latest
@@ -193,13 +194,64 @@ function Test-IsPluginSkill {
     return $false
   }
   
-  # 检查是否指向 .localAIPlugins（插件中心）
+  # 检查是否指向 .localAi\plugins（插件中心）
   $target = $item.Target
   if (-not $target) {
     return $false
   }
   
-  return $target -like "*\.localAIPlugins\*"
+  return $target -like "*\.localAi\plugins\*"
+}
+
+function Sync-SkillViaCenter {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$Source,
+    [Parameter(Mandatory = $true)]
+    [string]$Destination,
+    [Parameter(Mandatory = $true)]
+    [string]$SkillName,
+    [Parameter(Mandatory = $true)]
+    [string]$CenterPath,
+    [Parameter(Mandatory = $true)]
+    [string]$Mode
+  )
+  
+  # Link 模式：先复制到技能中心，再链接到平台
+  if ($Mode -eq "Link") {
+    $centerSkillPath = Join-Path $CenterPath $SkillName
+    
+    # 确保技能中心目录存在
+    if (-not (Test-Path $CenterPath)) {
+      New-Item -ItemType Directory -Force -Path $CenterPath | Out-Null
+    }
+    
+    # 复制到技能中心（如果不存在或需要更新）
+    if (-not (Test-Path $centerSkillPath)) {
+      Copy-Item -Recurse -Force $Source $centerSkillPath
+    }
+    
+    # 从技能中心创建符号链接到平台
+    if (Test-Path $Destination) {
+      Remove-Item -Recurse -Force $Destination
+    }
+    
+    try {
+      cmd /c mklink /J "$Destination" "$centerSkillPath" | Out-Null
+      return "Link (via center)"
+    } catch {
+      # 如果无法创建链接，直接复制
+      Copy-Item -Recurse -Force $Source $Destination
+      return "Copy (fallback)"
+    }
+  }
+  
+  # Copy 模式：直接从源复制到目标
+  if (Test-Path $Destination) {
+    Remove-Item -Recurse -Force $Destination
+  }
+  Copy-Item -Recurse -Force $Source $Destination
+  return "Copy"
 }
 
 function Assert-SafeSkillsTarget {
@@ -346,11 +398,13 @@ foreach ($clientDir in $clientDirs) {
       }
     }
     
-    $result = & $linkOrCopyScript -Source $source -Destination $destination -Mode $skillMode
-    $modeUsed = ($result | Select-Object -Last 1).mode
-    if (-not $modeUsed) {
-      $modeUsed = $skillMode
-    }
+    # 使用新的同步逻辑
+    $skillCenterFull = [System.IO.Path]::GetFullPath([Environment]::ExpandEnvironmentVariables($SkillCenterPath))
+    $modeUsed = Sync-SkillViaCenter -Source $source `
+                                     -Destination $destination `
+                                     -SkillName $skillName `
+                                     -CenterPath $skillCenterFull `
+                                     -Mode $skillMode
 
     $skillState[$skillName] = [ordered]@{
       source = (Get-FullPath $source)

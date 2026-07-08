@@ -3,14 +3,11 @@ param(
   [string]$RepoRoot = $PWD,
   
   [Parameter(Mandatory = $false)]
-  [string]$PluginCenterPath = "$env:USERPROFILE\.localAIPlugins",
+  [string]$PluginCenterPath = "$env:USERPROFILE\.localAi\plugins",
   
   [Parameter(Mandatory = $false)]
-  [string]$ConfigPath = $null,
-  
-  [Parameter(Mandatory = $false)]
-  [ValidateSet("Link", "Copy")]
-  [string]$Mode = "Copy"  # 默认改为 Copy，避免删除项目后插件失效
+  [string]$ConfigPath = $null
+  # 移除 Mode 参数，插件始终复制到 .localAi/plugins
 )
 
 Set-StrictMode -Version Latest
@@ -194,7 +191,7 @@ if (-not (Test-Path $pluginCenterFull)) {
 
 Write-ColorMessage "📂 插件源: $pluginsSourceDir" "Gray"
 Write-ColorMessage "📦 插件中心: $pluginCenterFull" "Gray"
-Write-ColorMessage "🔗 同步模式: $Mode`n" "Gray"
+Write-ColorMessage "🔗 同步模式: 复制（插件始终复制到中心）`n" "Gray"
 
 # 步骤 1: 同步插件到中心
 Write-ColorMessage "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" "Cyan"
@@ -232,7 +229,7 @@ foreach ($pluginDir in $pluginDirs) {
   $synced = Sync-PluginToCenter -PluginName $pluginName `
                                  -SourcePath $sourcePath `
                                  -CenterPath $pluginCenterFull `
-                                 -SyncMode $Mode
+                                 -SyncMode "Copy"  # 插件始终使用 Copy 模式
   
   if ($synced) {
     $syncedPlugins += $pluginName
@@ -310,6 +307,7 @@ Write-ColorMessage "`n📝 说明:" "Yellow"
 Write-ColorMessage "  • 插件完整存储在: $pluginCenterFull" "White"
 Write-ColorMessage "  • 插件的技能链接到: <平台>/skills/<技能名>" "White"
 Write-ColorMessage "  • 技能可以访问插件的 packages/core 核心包" "White"
+Write-ColorMessage "  • 插件始终复制到中心，删除项目后仍可用" "Cyan"
 if ($pluginConfig) {
   Write-ColorMessage "  • 可在 setup.json 的 plugins 配置中启用/禁用插件" "Cyan"
 }
