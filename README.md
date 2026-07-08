@@ -26,18 +26,21 @@
 git clone --recursive https://github.com/bird-fly/agent-config.git
 cd agent-config
 
-# 安装 Understand-Anything 完整插件（Codex/OpenCode）
-.\scripts\install-understand-plugin.ps1 -Platform all
+# 同步插件到统一管理中心（推荐）
+.\scripts\sync-plugins.ps1 -Mode Link
 
 # 首次设置（生成 prompt 并同步技能）
 .\setup.ps1 -Mode Copy
 ```
 
-**Claude Code 用户**: 使用 `/plugin install understand-anything` 安装插件，然后运行 `.\setup.ps1`
+**插件管理**: 所有插件集中存储在 `%USERPROFILE%\.localAIPlugins`，各平台通过符号链接引用，实现统一管理、节省空间。📖 [详细说明](docs/PLUGIN_MANAGEMENT_CENTER.md)
 
 ### 日常使用
 
 ```powershell
+# 同步插件到管理中心（首次或更新插件后）
+.\scripts\sync-plugins.ps1 -Mode Link
+
 # 修改规则或技能后，重新同步
 .\setup.ps1 -Mode Copy
 
@@ -107,11 +110,13 @@ agent-config/
 ├── scripts/                     # 自动化脚本
 │   ├── build-prompts.ps1       # 生成 prompt
 │   ├── sync-skills.ps1         # 同步技能
+│   ├── sync-plugins.ps1        # 同步插件到管理中心 ⭐
 │   ├── skill-source.ps1        # 技能来源查询
 │   ├── analyze-skills.js       # 技能分析
 │   └── doctor.ps1              # 配置诊断
 │
 ├── docs/                        # 文档
+│   ├── PLUGIN_MANAGEMENT_CENTER.md    # 插件管理中心 ⭐
 │   ├── UNDERSTAND_ANYTHING_PLUGIN.md  # Understand插件文档
 │   └── AGENT_INSTALLATION_GUIDE.md    # 智能体安装指南
 │
@@ -230,7 +235,42 @@ node scripts\analyze-skills.js
 
 ## 🌟 特色功能
 
-### 1. Understand-Anything 插件
+### 1. 统一插件管理中心 ⭐
+
+**三层架构**: 仓库层 → 插件中心 → 平台层
+
+所有插件集中存储在 `%USERPROFILE%\.localAIPlugins`，各平台通过符号链接引用：
+
+```
+仓库 (shared/plugins/)
+    ↓ 同步
+插件中心 (~/.localAIPlugins/)
+    ↓ 链接
+平台 (Claude/Codex/OpenCode)
+```
+
+**优势**:
+- ✅ 统一管理 - 所有插件只存一份
+- ✅ 节省空间 - 约节省 67% 磁盘空间
+- ✅ 版本一致 - 所有平台使用相同版本
+- ✅ 易于更新 - 更新一次，全部生效
+
+**使用**:
+
+```powershell
+# 同步插件到管理中心
+.\scripts\sync-plugins.ps1 -Mode Link
+
+# 验证安装
+ls $env:USERPROFILE\.localAIPlugins
+
+# 检查平台链接
+ls $env:USERPROFILE\.claude\understand-anything
+```
+
+📖 [完整文档](docs/PLUGIN_MANAGEMENT_CENTER.md)
+
+### 2. Understand-Anything 插件
 
 完整的代码库分析插件，包含 8 个技能：
 
@@ -258,7 +298,7 @@ node scripts\analyze-skills.js
 
 📖 [详细文档](docs/UNDERSTAND_ANYTHING_PLUGIN.md) | [安装总结](docs/INSTALLATION_SUMMARY.md)
 
-### 2. 技能来源查询
+### 3. 技能来源查询
 
 不记得某个技能来自哪里？一键查询：
 
@@ -273,7 +313,7 @@ node scripts\analyze-skills.js
 #   描述: 对计划或设计进行无情审问
 ```
 
-### 3. 自动化检查
+### 4. 自动化检查
 
 确保配置正确：
 
@@ -301,8 +341,9 @@ node scripts\analyze-skills.js
 
 所有文档位于 [`docs/`](docs/) 目录：
 
+- [🔌 插件管理中心](docs/PLUGIN_MANAGEMENT_CENTER.md) ⭐ 新增
 - [技能同步模式配置](docs/SKILL_SYNC_MODES.md) ⭐
-- [Understand 插件完整安装](docs/UNDERSTAND_ANYTHING_PLUGIN.md) ⭐ 更新
+- [Understand 插件完整安装](docs/UNDERSTAND_ANYTHING_PLUGIN.md) ⭐
 - [Understand 插件安装总结](docs/INSTALLATION_SUMMARY.md)
 - [智能体 vs 插件 vs 技能](docs/AGENT_INSTALLATION_GUIDE.md)
 - [常用命令速查](docs/COMMANDS.md)
