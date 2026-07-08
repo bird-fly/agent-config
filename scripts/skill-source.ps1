@@ -65,11 +65,141 @@ function Get-SkillMetadata {
         $metadata.Sources += "GitHub: $($Matches[1])"
     }
     
+    # 通过技能引用关系推断来源
+    if ($metadata.Sources.Count -eq 0) {
+        $inferredSource = Infer-SkillSource -SkillName $Name -Content $content
+        if ($inferredSource) {
+            $metadata.Sources += $inferredSource.Source
+            $metadata.Category = $inferredSource.Category
+        }
+    }
+    
     if ($metadata.Sources.Count -eq 0) {
         $metadata.Sources += "未知来源"
     }
     
     return $metadata
+}
+
+function Infer-SkillSource {
+    param(
+        [string]$SkillName,
+        [string]$Content
+    )
+    
+    # 第一步：通过内容特征识别已知来源
+    if ($Content -match 'mattpocock|matt-pocock|Matt Pocock') {
+        return @{
+            Source = "Matt Pocock"
+            Category = "Matt Pocock"
+        }
+    }
+    
+    if ($Content -match 'anthropic|Anthropic') {
+        return @{
+            Source = "Anthropic"
+            Category = "Anthropic"
+        }
+    }
+    
+    if ($SkillName -match '^multica-' -or $Content -match '\bmultica\b') {
+        return @{
+            Source = "Multica Platform"
+            Category = "Multica"
+        }
+    }
+    
+    if ($Content -match 'docs/superpowers/|~/.config/superpowers/') {
+        return @{
+            Source = "Superpowers Framework"
+            Category = "Superpowers"
+        }
+    }
+    
+    # 第二步：分析技能引用网络，通过"社群发现"推断来源
+    $skillsDir = Join-Path $RepoRoot "shared\skills"
+    
+    # 获取所有技能及其已知来源
+    $allSkills = Get-ChildItem $skillsDir -Directory | Select-Object -ExpandProperty Name
+    $knownSources = @{}
+    
+    # 先识别所有有明确来源标识的技能
+    foreach ($skill in $allSkills) {
+        $skillPath = Join-Path $skillsDir "$skill\SKILL.md"
+        if (Test-Path $skillPath) {
+            $skillContent = Get-Content $skillPath -Raw
+            
+            # 检测已知来源标识
+            if ($skillContent -match 'mattpocock|matt-pocock|Matt Pocock') {
+                $knownSources[$skill] = "Matt Pocock"
+            }
+            elseif ($skillContent -match 'anthropic|Anthropic') {
+                $knownSources[$skill] = "Anthropic"
+            }
+            elseif ($skill -match '^multica-' -or $skillContent -match '\bmultica\b') {
+                $knownSources[$skill] = "Multica Platform"
+            }
+            elseif ($skillContent -match 'docs/superpowers/|~/.config/superpowers/') {
+                $knownSources[$skill] = "Superpowers Framework"
+            }
+        }
+    }
+    
+    # 分析当前技能引用了哪些其他技能
+    $referencedSkills = @()
+    foreach ($skill in $allSkills) {
+        # 检测 /skill 格式的引用
+        if ($Content -match "/$skill\b") {
+            $referencedSkills += $skill
+        }
+    }
+    
+    # 统计引用的技能属于哪些来源
+    $sourceCounts = @{}
+    foreach ($refSkill in $referencedSkills) {
+        if ($knownSources.ContainsKey($refSkill)) {
+            $source = $knownSources[$refSkill]
+            if (-not $sourceCounts.ContainsKey($source)) {
+                $sourceCounts[$source] = 0
+            }
+            $sourceCounts[$source]++
+        }
+    }
+    
+    # 如果引用了某个来源的多个技能（≥2个），推断为同一来源
+    $maxCount = 0
+    $inferredSource = $null
+    foreach ($source in $sourceCounts.Keys) {
+        if ($sourceCounts[$source] -gt $maxCount) {
+            $maxCount = $sourceCounts[$source]
+            $inferredSource = $source
+        }
+    }
+    
+    if ($maxCount -ge 2) {
+        return @{
+            Source = "$inferredSource (通过技能关联推断，引用了 $maxCount 个同源技能)"
+            Category = $inferredSource
+        }
+    }
+    
+    # 第三步：检查是否被其他技能引用（反向查找）
+    foreach ($skill in $allSkills) {
+        if ($knownSources.ContainsKey($skill)) {
+            $skillPath = Join-Path $skillsDir "$skill\SKILL.md"
+            if (Test-Path $skillPath) {
+                $skillContent = Get-Content $skillPath -Raw
+                if ($skillContent -match "/$SkillName\b") {
+                    return @{
+                        Source = "$($knownSources[$skill]) (被 $skill 引用)"
+                        Category = $knownSources[$skill]
+                    }
+                }
+            }
+        }
+    }
+    
+    return $null
 }
 
 function Show-SkillInfo {

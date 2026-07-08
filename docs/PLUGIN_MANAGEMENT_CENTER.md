@@ -2,12 +2,12 @@
 
 ## 概述
 
-统一插件管理中心是一个集中式插件存储和分发方案，所有插件集中存储在 `.localAIPlugins`，各平台通过符号链接引用。
+统一插件管理中心是一个集中式插件存储和分发方案，所有插件集中存储在 `.localAi\plugins`，各平台通过符号链接引用技能。
 
 **默认行为**：
-- 插件从仓库**复制**到 `.localAIPlugins`（默认 Copy 模式）
-- 这样即使删除项目目录，插件仍然可用
+- 插件从仓库**复制**到 `.localAi\plugins`（删除项目后仍可用）
 - 插件技能从中心**符号链接**到各平台的 `skills/` 目录
+- 可在 `setup.json` 中配置插件的启用/禁用
 
 **关键概念**：
 - **插件 ≠ 技能**：插件是完整的功能包，包含：
@@ -33,9 +33,9 @@
 
 ```
 仓库层 (shared/plugins/)
-    ↓ 复制（默认）或符号链接
-中心层 (%USERPROFILE%\.localAIPlugins/)
-    ↓ 符号链接
+    ↓ 复制到插件中心
+中心层 (%USERPROFILE%\.localAi\plugins/)
+    ↓ 符号链接技能
 平台层 (~/.claude/, ~/.codex/, ~/.openCode/)
 ```
 
@@ -52,11 +52,11 @@
 │    └─ skills/      (8个技能)                            │
 └─────────────────────────────────────────────────────────┘
                          │ 
-                    复制（默认）或 Junction 符号链接
+                    复制到插件中心
                          ↓
 ┌─────────────────────────────────────────────────────────┐
 │ 插件中心层 (统一存储)                                    │
-│ %USERPROFILE%\.localAIPlugins\                           │
+│ %USERPROFILE%\.localAi\plugins\                          │
 │ └─ understand-anything\ (独立副本，可删除仓库)           │
 │    ├─ agents/                                            │
 │    ├─ hooks/                                             │
@@ -81,53 +81,62 @@
 │    └─ ...                                                │
 │                                                          │
 │ 链接路径示例:                                             │
-│ skills/understand → .localAIPlugins/understand-anything/ │
+│ skills/understand → .localAi/plugins/understand-anything/│
 │                     skills/understand                    │
 └──────────────────────────────────────────────────────────┘
 ```
 
 **关键点**：
-1. **插件整体**默认复制到 `.localAIPlugins/understand-anything/`
+1. **插件整体**复制到 `.localAi\plugins\understand-anything\`
 2. **每个技能单独链接**到平台的 `skills/` 目录
 3. 技能通过符号链接的相对路径可以访问 `../packages/core/`
 4. 所有平台的技能都指向同一个插件中心，保持版本一致
-5. **删除项目后插件仍可用**（使用 Copy 模式）
+5. **删除项目后插件仍可用**（复制模式）
 
 ## ✅ 优势
 
 ### 1. 统一管理
 
-- **单一数据源**: 所有插件集中在 `.localAIPlugins`
+- **单一数据源**: 所有插件集中在 `.localAi\plugins`
 - **版本一致**: 各平台使用相同版本
-- **独立性强**: 删除项目后插件仍可用（默认 Copy 模式）
+- **独立性强**: 删除项目后插件仍可用
+- **灵活配置**: 可在 setup.json 中启用/禁用插件
 
-### 2. 节省空间
+### 2. 维护便捷
 
-- **避免重复**: 插件在中心存一份，平台只链接技能
-- **按需同步**: 通过配置只同步需要的插件
-
-### 3. 维护便捷
-
-- **集中备份**: 只需备份 `.localAIPlugins`
-- **灵活配置**: 可选择 Copy 或 Link 模式
-- **易于管理**: 通过配置启用/禁用插件
+- **集中备份**: 只需备份 `.localAi\plugins`
+- **自动清理**: 禁用插件时自动清理插件和技能链接
+- **易于管理**: 通过配置控制插件同步
 
 ## 🚀 使用方法
 
 ### 快速开始
 
 ```powershell
-# 1. 同步插件到中心并链接到各平台（默认复制模式）
+# 1. 同步插件到中心并链接到各平台
 .\scripts\sync-plugins.ps1
-
-# 或使用符号链接模式（节省空间，但删除项目后失效）
-.\scripts\sync-plugins.ps1 -Mode Link
 
 # 2. 同步技能到各平台
 .\setup.ps1 -Mode Copy
 
 # 3. 重启 AI 工具
 ```
+
+### 配置插件启用/禁用
+
+```json
+// setup.json
+{
+  "plugins": {
+    "understand-anything": true,   // 启用
+    "another-plugin": false        // 禁用
+  }
+}
+```
+
+禁用插件后运行 `sync-plugins.ps1`，会自动：
+- 删除 `.localAi\plugins\` 中的插件
+- 删除各平台 `skills/` 中的技能链接
 
 ### 详细步骤
 
@@ -136,11 +145,8 @@
 ```powershell
 cd E:\Project\codexProject\agent-config
 
-# 使用符号链接模式（推荐）
-.\scripts\sync-plugins.ps1 -RepoRoot $PWD -Mode Link
-
-# 或使用复制模式
-.\scripts\sync-plugins.ps1 -RepoRoot $PWD -Mode Copy
+# 同步插件到管理中心
+.\scripts\sync-plugins.ps1 -RepoRoot $PWD
 ```
 
 **输出示例**:
@@ -150,7 +156,7 @@ cd E:\Project\codexProject\agent-config
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 步骤 1: 同步插件到中心
-  ✅ understand-anything (符号链接)
+  ✅ understand-anything (复制)
 
 步骤 2: 链接插件技能到各平台
   understand-anything:
@@ -162,7 +168,7 @@ cd E:\Project\codexProject\agent-config
 
 📊 统计:
   • 同步插件数: 1
-  • 插件中心: C:\Users\xxx\.localAIPlugins
+  • 插件中心: C:\Users\xxx\.localAi\plugins
   • Claude: 8 个技能
   • Codex: 8 个技能
   • OpenCode: 8 个技能
@@ -172,7 +178,7 @@ cd E:\Project\codexProject\agent-config
 
 ```powershell
 # 检查插件中心
-ls $env:USERPROFILE\.localAIPlugins
+ls $env:USERPROFILE\.localAi\plugins
 
 # 检查平台技能链接
 ls $env:USERPROFILE\.claude\skills\understand*
@@ -195,8 +201,8 @@ Get-Item $env:USERPROFILE\.claude\skills\understand | Select-Object Name, LinkTy
 ### 插件中心目录
 
 ```
-%USERPROFILE%\.localAIPlugins\
-├── understand-anything\        # Junction → 仓库
+%USERPROFILE%\.localAi\plugins\
+├── understand-anything\        # 复制的插件副本
 │   ├── .claude-plugin\        # 插件元数据
 │   ├── agents\                # 9个子智能体
 │   ├── hooks\                 # 自动化钩子（Git commit监听）
@@ -233,13 +239,13 @@ Get-Item $env:USERPROFILE\.claude\skills\understand | Select-Object Name, LinkTy
 **技能链接的相对路径**：
 ```
 ~/.claude/skills/understand/
-    → ~/.localAIPlugins/understand-anything/skills/understand/
+    → ~/.localAi/plugins/understand-anything/skills/understand/
     → 可访问 ../../packages/core/ (核心包)
 ```
 
 **说明**：
 - 插件的技能和普通技能**混合在同一个 skills/ 目录**
-- 插件技能指向 `.localAIPlugins/插件名/skills/技能名`
+- 插件技能指向 `.localAi/plugins/插件名/skills/技能名`
 - 普通技能指向 `shared/skills/技能名`
 - 通过符号链接保持相对路径，技能可以访问插件的核心包
 
@@ -252,15 +258,20 @@ Get-Item $env:USERPROFILE\.claude\skills\understand | Select-Object Name, LinkTy
 .\scripts\sync-plugins.ps1 -PluginCenterPath "D:\MyAIPlugins"
 ```
 
-### 选择性同步
+### 插件启用/禁用配置
 
-编辑 `shared/plugins/` 目录，只保留需要的插件：
+在 `setup.json` 中配置：
 
+```json
+{
+  "plugins": {
+    "understand-anything": true,   // 启用
+    "another-plugin": false        // 禁用（不同步，且会清理已同步的）
+  }
+}
 ```
-shared/plugins/
-├── understand-anything\     # 会被同步
-└── another-plugin\          # 也会被同步
-```
+
+未在配置中列出的插件默认启用。
 
 ### 更新插件
 
@@ -269,10 +280,9 @@ shared/plugins/
 cd shared/plugins/understand-anything
 git pull origin main
 
-# 2. 重新同步（因为使用符号链接，通常不需要）
-# 如果使用 Copy 模式，需要重新运行
+# 2. 重新同步
 cd ../../..
-.\scripts\sync-plugins.ps1 -Mode Link
+.\scripts\sync-plugins.ps1
 ```
 
 ## 🔍 故障排查
@@ -291,7 +301,7 @@ cd ../../..
 
 ```powershell
 # 以管理员身份运行 PowerShell
-.\scripts\sync-plugins.ps1 -Mode Link
+.\scripts\sync-plugins.ps1
 ```
 
 **方案 B** - 启用开发者模式:
@@ -299,12 +309,6 @@ cd ../../..
 1. 设置 → 更新和安全 → 开发者选项
 2. 启用"开发人员模式"
 3. 重新运行脚本
-
-**方案 C** - 使用复制模式:
-
-```powershell
-.\scripts\sync-plugins.ps1 -Mode Copy
-```
 
 ### 问题 2: 平台无法识别插件
 
@@ -328,11 +332,8 @@ Test-Path "$env:USERPROFILE\.codex\understand-anything\packages\core"
 **解决方案**:
 
 ```powershell
-# 重新同步插件（必须用 Link 模式）
-.\scripts\sync-plugins.ps1 -Mode Link
-
-# 如果无法创建符号链接，使用 Copy 模式
-.\scripts\sync-plugins.ps1 -Mode Copy
+# 重新同步插件
+.\scripts\sync-plugins.ps1
 
 # 重启 AI 工具
 ```
@@ -342,67 +343,45 @@ Test-Path "$env:USERPROFILE\.codex\understand-anything\packages\core"
 - 如果只复制了 skills/ 目录（通过 setup.ps1），会找不到核心包
 - 必须通过 sync-plugins.ps1 同步整个插件
 
-### 问题 3: 插件中心和平台不同步
-
-**症状**:
-
-- 更新了仓库，但平台没有生效
-
-**原因**:
-
-- 使用了 Copy 模式而不是 Link 模式
+### 问题 3: 插件被禁用后如何重新启用
 
 **解决方案**:
 
-```powershell
-# 切换到 Link 模式
-.\scripts\sync-plugins.ps1 -Mode Link
+```json
+// setup.json - 设置为 true 或删除该配置项
+{
+  "plugins": {
+    "understand-anything": true
+  }
+}
 ```
 
-## 📊 对比
+```powershell
+# 重新同步
+.\scripts\sync-plugins.ps1
+```
 
-### 旧方案 vs 新方案
+## 📊 优势对比
 
-| 方面                 | 旧方案           | 新方案 (插件中心)  |
+### 集中管理 vs 分散安装
+
+| 方面                 | 分散安装         | 集中管理（本方案） |
 | -------------------- | ---------------- | ------------------ |
 | **存储位置**   | 各平台独立存储   | 中心统一存储       |
-| **磁盘占用**   | 3份 × 插件大小  | 1份插件 + 符号链接 |
 | **更新方式**   | 每个平台单独更新 | 更新一次全部生效   |
 | **版本一致性** | 可能不一致       | 始终一致           |
 | **管理复杂度** | 高               | 低                 |
-
-### 示例
-
-以 understand-anything 插件为例（约 50MB）:
-
-**旧方案**:
-
-```
-~/.claude/understand-anything      50MB
-~/.codex/understand-anything       50MB
-~/.openCode/understand-anything    50MB
-总计: 150MB
-```
-
-**新方案**:
-
-```
-~/.localAIPlugins/understand-anything  50MB (真实存储)
-~/.claude/understand-anything          0MB (符号链接)
-~/.codex/understand-anything           0MB (符号链接)
-~/.openCode/understand-anything        0MB (符号链接)
-总计: ~50MB
-```
-
-**节省**: 约 100MB (67%)
+| **配置灵活性** | 无               | 支持启用/禁用      |
+| **项目独立性** | 依赖项目         | 删除项目后仍可用   |
 
 ## 🎯 最佳实践
 
 ### 推荐配置
 
-1. **使用 Link 模式** - 实时同步，节省空间
-2. **定期更新** - 保持插件最新
-3. **备份中心** - 定期备份 `.localAIPlugins`
+1. **使用默认复制模式** - 删除项目后插件仍可用
+2. **配置插件启用/禁用** - 在 setup.json 中管理插件
+3. **定期更新** - 保持插件最新
+4. **备份中心** - 定期备份 `.localAi\plugins`
 
 ### 完整工作流
 
@@ -411,15 +390,19 @@ Test-Path "$env:USERPROFILE\.codex\understand-anything\packages\core"
 git clone --recursive https://github.com/bird-fly/agent-config.git
 cd agent-config
 
-# 2. 同步插件到中心
-.\scripts\sync-plugins.ps1 -Mode Link
+# 2. 配置插件（可选）
+Copy-Item setup.example.json setup.json
+# 编辑 setup.json 中的 plugins 配置
 
-# 3. 同步技能和规则
+# 3. 同步插件到中心
+.\scripts\sync-plugins.ps1
+
+# 4. 同步技能和规则
 .\setup.ps1 -Mode Copy
 
-# 4. 重启 AI 工具
+# 5. 重启 AI 工具
 
-# 5. 测试功能
+# 6. 测试功能
 # 在 Claude/Codex/OpenCode 中运行: /understand
 ```
 
@@ -430,9 +413,8 @@ cd agent-config
 git pull origin main
 git submodule update --recursive
 
-# 2. 如果使用 Link 模式，插件自动更新
-# 如果使用 Copy 模式：
-.\scripts\sync-plugins.ps1 -Mode Copy
+# 2. 重新同步插件
+.\scripts\sync-plugins.ps1
 
 # 3. 重新同步技能
 .\setup.ps1 -Mode Copy
@@ -443,8 +425,9 @@ git submodule update --recursive
 ## 📝 相关文档
 
 - [README.md](../README.md) - 项目主文档
-- [UNDERSTAND_ANYTHING_PLUGIN.md](UNDERSTAND_ANYTHING_PLUGIN.md) - Understand 插件详细说明
-- [SKILL_SYNC_MODES.md](SKILL_SYNC_MODES.md) - 技能同步模式配置
+- [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md) - 项目概述和架构（包含技能同步模式说明）
+- [COMMANDS.md](COMMANDS.md) - 常用命令速查
+- [COMMANDS.md](COMMANDS.md) - 常用命令速查
 
 ## 🔮 未来扩展
 

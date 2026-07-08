@@ -1,35 +1,80 @@
 # agent-config Commands
 
-本文件汇总本项目常用 PowerShell 命令。默认从仓库根目录执行：
+本文件汇总本项目常用 PowerShell 命令。默认从仓库根目录执行。
+
+## 🔌 插件管理命令
+
+### 同步插件到管理中心
 
 ```powershell
-cd F:\AI\agent-config
+# 同步所有插件到 %USERPROFILE%\.localAi\plugins
+.\scripts\sync-plugins.ps1
+
+# 使用指定配置文件
+.\scripts\sync-plugins.ps1 -ConfigPath .\setup.json
+
+# 自定义插件中心路径
+.\scripts\sync-plugins.ps1 -PluginCenterPath "D:\MyAIPlugins"
 ```
 
-## 📚 技能管理命令 (新增)
+### 配置插件启用/禁用
+
+```powershell
+# 编辑配置文件
+notepad setup.json
+
+# 示例配置：
+# {
+#   "plugins": {
+#     "understand-anything": true,   // 启用
+#     "another-plugin": false        // 禁用
+#   }
+# }
+
+# 重新同步
+.\scripts\sync-plugins.ps1
+```
+
+说明：
+
+- 禁用插件会自动删除插件中心和各平台的相关文件
+- 未配置的插件默认启用
+- 插件始终复制到中心，删除项目后仍可用
+
+## 📚 技能管理命令
 
 ### 查看技能来源和归属
+
 ```powershell
-# 方式1: 使用 Node.js 分析工具（推荐）
-node scripts\analyze-skills.js
+# 查看单个技能
+.\scripts\skill-source.ps1 grill-me
 
-# 查看特定技能详情
-node scripts\analyze-skills.js --skill grill-me
+# 列出所有技能
+.\scripts\skill-source.ps1 -All
 
-# 显示详细来源列表
-node scripts\analyze-skills.js --verbose
+# 按来源分组
+.\scripts\skill-source.ps1 -BySource
 
-# 方式2: 使用 PowerShell 快速查询
-.\scripts\skill-source.ps1 grill-me           # 查看单个技能
-.\scripts\skill-source.ps1 -All               # 列出所有技能
-.\scripts\skill-source.ps1 -BySource          # 按来源分组
-.\scripts\skill-source.ps1 -Interactive       # 交互模式
+# 交互模式（推荐）
+.\scripts\skill-source.ps1 -Interactive
+```
 
-# 查看完整分类文档
-Get-Content SKILLS_CATALOG.md
+**输出示例**：
+
+```
+╔═══════════════════════════════════════════════════════════╗
+║           技能详情 - grill-me                              ║
+╚═══════════════════════════════════════════════════════════╝
+
+📛 名称: grill-me
+📝 描述: 对计划或设计进行无情审问
+📁 分类: Matt Pocock
+📦 来源: Matt Pocock
+📄 文档: shared\skills\grill-me\SKILL.md
 ```
 
 ### 管理技能启用/禁用
+
 ```powershell
 # 编辑客户端技能配置
 # Claude Code
@@ -43,6 +88,7 @@ notepad clients\openCode\skills.manifest.json
 ```
 
 ### 查看技能详情
+
 ```powershell
 # 查看特定技能的文档
 Get-Content shared\skills\{skill-name}\SKILL.md

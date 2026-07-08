@@ -26,9 +26,6 @@
 git clone --recursive https://github.com/bird-fly/agent-config.git
 cd agent-config
 
-# 同步插件到统一管理中心（Codex/OpenCode）
-.\scripts\install-understand-plugin.ps1 -Platform all
-
 # 同步插件到统一管理中心（插件始终复制，删除项目后仍可用）
 .\scripts\sync-plugins.ps1
 
@@ -36,7 +33,7 @@ cd agent-config
 .\setup.ps1 -Mode Copy
 ```
 
-**插件管理**: 所有插件集中存储在 `%USERPROFILE%\.localAi\plugins`（始终复制，删除项目后仍可用），各平台通过符号链接引用技能。📖 [详细说明](docs/PLUGIN_MANAGEMENT_CENTER.md)
+**插件管理**: 所有插件集中存储在 `%USERPROFILE%\.localAi\plugins`（始终复制，删除项目后仍可用），各平台通过符号链接引用技能。可在 `setup.json` 中配置启用/禁用插件。📖 [详细说明](docs/PLUGIN_MANAGEMENT_CENTER.md)
 
 ### 日常使用
 
@@ -50,10 +47,6 @@ cd agent-config
 # 技能使用 Link 模式（先复制到 .localAi/skills，再链接）
 .\setup.ps1 -Mode Link
 
-# 使用配置文件指定每个技能的同步模式
-# 编辑 setup.json，在 skillSyncModes 中配置
-.\setup.ps1
-
 # 检查配置状态
 .\scripts\doctor.ps1 -RepoRoot .
 
@@ -64,28 +57,12 @@ cd agent-config
 .\scripts\skill-source.ps1 -Interactive
 ```
 
-### 技能同步模式配置
+**说明**：
+- **Copy 模式**（推荐）：直接复制技能到平台，最稳定
+- **Link 模式**：先复制到 `.localAi/skills`，再创建符号链接
+- 可在 `setup.json` 的 `skillSyncModes` 中为每个技能单独配置模式
 
-你可以为每个技能单独指定同步模式（Link 或 Copy）：
-
-```json
-// setup.json
-{
-  "clients": { ... },
-  "skillSyncModes": {
-    "understand": "Link",        // Understand 系列必须用 Link
-    "understand-chat": "Link",
-    "grill-me": "Copy",           // 普通技能可以用 Copy
-    "triage": "Copy"
-  }
-}
-```
-
-**推荐配置**:
-- ✅ **Understand 系列**: 使用 `Link`（必须，因为依赖核心包）
-- ✅ **其他技能**: 使用 `Copy`（更稳定）
-
-📖 [详细说明](docs/SKILL_SYNC_MODES.md)
+📖 完整说明见 [项目概述](docs/PROJECT_OVERVIEW.md)
 
 ---
 
@@ -245,33 +222,46 @@ node scripts\analyze-skills.js
 
 **三层架构**: 仓库层 → 插件中心 → 平台层
 
-所有插件集中存储在 `%USERPROFILE%\.localAIPlugins`，各平台通过符号链接引用：
+所有插件集中存储在 `%USERPROFILE%\.localAi\plugins`，各平台通过符号链接引用技能：
 
 ```
 仓库 (shared/plugins/)
-    ↓ 同步
-插件中心 (~/.localAIPlugins/)
-    ↓ 链接
+    ↓ 复制（默认）
+插件中心 (~/.localAi/plugins/)
+    ↓ 链接技能
 平台 (Claude/Codex/OpenCode)
 ```
 
 **优势**:
+
 - ✅ 统一管理 - 所有插件只存一份
-- ✅ 节省空间 - 约节省 67% 磁盘空间
+- ✅ 项目独立 - 删除项目后插件仍可用
 - ✅ 版本一致 - 所有平台使用相同版本
-- ✅ 易于更新 - 更新一次，全部生效
+- ✅ 灵活配置 - 可在 setup.json 中启用/禁用插件
 
 **使用**:
 
 ```powershell
-# 同步插件到管理中心
-.\scripts\sync-plugins.ps1 -Mode Link
+# 同步插件到管理中心（默认复制模式）
+.\scripts\sync-plugins.ps1
 
 # 验证安装
-ls $env:USERPROFILE\.localAIPlugins
+ls $env:USERPROFILE\.localAi\plugins
 
-# 检查平台链接
-ls $env:USERPROFILE\.claude\understand-anything
+# 检查平台技能链接
+ls $env:USERPROFILE\.claude\skills\understand*
+```
+
+**配置插件启用/禁用**:
+
+```json
+// setup.json
+{
+  "plugins": {
+    "understand-anything": true,   // 启用
+    "another-plugin": false        // 禁用
+  }
+}
 ```
 
 📖 [完整文档](docs/PLUGIN_MANAGEMENT_CENTER.md)
@@ -347,12 +337,9 @@ ls $env:USERPROFILE\.claude\understand-anything
 
 所有文档位于 [`docs/`](docs/) 目录：
 
-- [🔌 插件管理中心](docs/PLUGIN_MANAGEMENT_CENTER.md) ⭐ 新增
-- [技能同步模式配置](docs/SKILL_SYNC_MODES.md) ⭐
-- [Understand 插件完整安装](docs/UNDERSTAND_ANYTHING_PLUGIN.md) ⭐
-- [Understand 插件安装总结](docs/INSTALLATION_SUMMARY.md)
-- [智能体 vs 插件 vs 技能](docs/AGENT_INSTALLATION_GUIDE.md)
-- [常用命令速查](docs/COMMANDS.md)
+- [📘 项目概述](docs/PROJECT_OVERVIEW.md) ⭐ 项目架构和核心概念（新手必读）
+- [🔌 插件管理中心](docs/PLUGIN_MANAGEMENT_CENTER.md) - 插件统一管理详解
+- [⚡ 常用命令速查](docs/COMMANDS.md) - 所有脚本命令参考
 
 ---
 
