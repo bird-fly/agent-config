@@ -26,19 +26,25 @@
 git clone --recursive https://github.com/bird-fly/agent-config.git
 cd agent-config
 
-# 同步插件到统一管理中心（推荐）
-.\scripts\sync-plugins.ps1 -Mode Link
+# 安装 Understand-Anything 完整插件（Codex/OpenCode）
+.\scripts\install-understand-plugin.ps1 -Platform all
+
+# 同步插件到统一管理中心（默认复制模式，删除项目后仍可用）
+.\scripts\sync-plugins.ps1
 
 # 首次设置（生成 prompt 并同步技能）
 .\setup.ps1 -Mode Copy
 ```
 
-**插件管理**: 所有插件集中存储在 `%USERPROFILE%\.localAIPlugins`，各平台通过符号链接引用，实现统一管理、节省空间。📖 [详细说明](docs/PLUGIN_MANAGEMENT_CENTER.md)
+**插件管理**: 所有插件集中存储在 `%USERPROFILE%\.localAIPlugins`，各平台通过符号链接引用技能，实现统一管理。默认使用复制模式，删除项目后插件仍然可用。📖 [详细说明](docs/PLUGIN_MANAGEMENT_CENTER.md)
 
 ### 日常使用
 
 ```powershell
-# 同步插件到管理中心（首次或更新插件后）
+# 同步插件到管理中心（默认复制，删除项目后仍可用）
+.\scripts\sync-plugins.ps1
+
+# 使用符号链接模式（节省空间，但需保留项目）
 .\scripts\sync-plugins.ps1 -Mode Link
 
 # 修改规则或技能后，重新同步

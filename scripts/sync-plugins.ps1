@@ -10,7 +10,7 @@ param(
   
   [Parameter(Mandatory = $false)]
   [ValidateSet("Link", "Copy")]
-  [string]$Mode = "Link"
+  [string]$Mode = "Copy"  # 默认改为 Copy，避免删除项目后插件失效
 )
 
 Set-StrictMode -Version Latest
