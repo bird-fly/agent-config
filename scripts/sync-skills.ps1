@@ -217,10 +217,10 @@ function Sync-SkillViaCenter {
     [string]$Mode
   )
   
+  $centerSkillPath = Join-Path $CenterPath $SkillName
+  
   # Link 模式：先复制到技能中心，再链接到平台
   if ($Mode -eq "Link") {
-    $centerSkillPath = Join-Path $CenterPath $SkillName
-    
     # 确保技能中心目录存在
     if (-not (Test-Path $CenterPath)) {
       New-Item -ItemType Directory -Force -Path $CenterPath | Out-Null
@@ -247,6 +247,15 @@ function Sync-SkillViaCenter {
   }
   
   # Copy 模式：直接从源复制到目标
+  # 清理技能中心中的旧数据（如果之前使用了 Link 模式）
+  if (Test-Path $centerSkillPath) {
+    try {
+      Remove-Item -Recurse -Force $centerSkillPath -ErrorAction SilentlyContinue
+    } catch {
+      # 忽略删除失败
+    }
+  }
+  
   if (Test-Path $Destination) {
     Remove-Item -Recurse -Force $Destination
   }
