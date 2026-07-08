@@ -238,7 +238,40 @@ foreach ($pluginDir in $pluginDirs) {
 
 if ($syncedPlugins.Count -eq 0) {
   Write-ColorMessage "`n⚠️  没有插件被同步" "Yellow"
-  exit 0
+}
+
+# 步骤 1.5: 清理已禁用的插件
+Write-ColorMessage "`n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" "Cyan"
+Write-ColorMessage "步骤 1.5: 清理已禁用的插件" "Yellow"
+Write-ColorMessage "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`n" "Cyan"
+
+$cleanedPlugins = @()
+if (Test-Path $pluginCenterFull) {
+  $centerPlugins = Get-ChildItem -Path $pluginCenterFull -Directory
+  foreach ($centerPlugin in $centerPlugins) {
+    $pluginName = $centerPlugin.Name
+    
+    # 检查插件是否在同步列表中
+    if ($syncedPlugins -notcontains $pluginName) {
+      # 检查是否被跳过（禁用）
+      if ($skippedPlugins -contains $pluginName) {
+        Write-ColorMessage "  🗑️  清理已禁用插件: $pluginName" "Yellow"
+      } else {
+        Write-ColorMessage "  🗑️  清理未知插件: $pluginName" "Gray"
+      }
+      
+      try {
+        Remove-Item -Recurse -Force $centerPlugin.FullName
+        $cleanedPlugins += $pluginName
+      } catch {
+        Write-ColorMessage "    ✗ 清理失败: $_" "Red"
+      }
+    }
+  }
+}
+
+if ($cleanedPlugins.Count -eq 0) {
+  Write-ColorMessage "  ✓ 无需清理" "Gray"
 }
 
 # 步骤 2: 链接插件的技能到各平台
@@ -273,6 +306,50 @@ foreach ($pluginName in $syncedPlugins) {
   }
 }
 
+# 步骤 2.5: 清理已禁用插件的技能链接
+Write-ColorMessage "`n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" "Cyan"
+Write-ColorMessage "步骤 2.5: 清理已禁用插件的技能链接" "Yellow"
+Write-ColorMessage "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`n" "Cyan"
+
+foreach ($pluginName in $cleanedPlugins) {
+  Write-ColorMessage "  ${pluginName}:" "Cyan"
+  
+  foreach ($platform in $platforms) {
+    if (-not (Test-Path $platform.Path)) {
+      continue
+    }
+    
+    $platformSkillsPath = Join-Path $platform.Path "skills"
+    if (-not (Test-Path $platformSkillsPath)) {
+      continue
+    }
+    
+    # 查找该插件的技能（通过检查链接目标）
+    $removedCount = 0
+    $skillDirs = Get-ChildItem -Path $platformSkillsPath -Directory -ErrorAction SilentlyContinue
+    
+    foreach ($skillDir in $skillDirs) {
+      $item = Get-Item $skillDir.FullName -ErrorAction SilentlyContinue
+      if ($item -and $item.LinkType -eq "Junction" -and $item.Target -like "*\$pluginName\skills\*") {
+        try {
+          Remove-Item -Recurse -Force $item.FullName
+          $removedCount++
+        } catch {
+          Write-ColorMessage "      ✗ 删除失败: $($skillDir.Name)" "Red"
+        }
+      }
+    }
+    
+    if ($removedCount -gt 0) {
+      Write-ColorMessage "    ✓ $($platform.Name): 清理 $removedCount 个技能链接" "Gray"
+    }
+  }
+}
+
+if ($cleanedPlugins.Count -eq 0) {
+  Write-ColorMessage "  ✓ 无需清理" "Gray"
+}
+
 # 步骤 3: 验证
 Write-ColorMessage "`n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" "Cyan"
 Write-ColorMessage "步骤 3: 验证安装" "Yellow"
@@ -293,6 +370,9 @@ Write-ColorMessage "📊 统计:" "Cyan"
 Write-ColorMessage "  • 同步插件数: $($syncedPlugins.Count)" "White"
 if ($skippedPlugins.Count -gt 0) {
   Write-ColorMessage "  • 跳过插件数: $($skippedPlugins.Count) ($($skippedPlugins -join ', '))" "Yellow"
+}
+if ($cleanedPlugins.Count -gt 0) {
+  Write-ColorMessage "  • 清理插件数: $($cleanedPlugins.Count) ($($cleanedPlugins -join ', '))" "Yellow"
 }
 Write-ColorMessage "  • 插件中心: $pluginCenterFull" "White"
 
