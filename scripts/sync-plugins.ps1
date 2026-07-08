@@ -69,7 +69,7 @@ function Sync-PluginToCenter {
   return $false
 }
 
-function Link-PluginToPlatform {
+function Link-PluginSkillsToPlatform {
   param(
     [string]$PlatformName,
     [string]$PlatformPath,
@@ -78,32 +78,50 @@ function Link-PluginToPlatform {
   )
   
   if (-not (Test-Path $PlatformPath)) {
-    return
+    return $null
   }
   
-  $sourcePath = Join-Path $CenterPath $PluginName
-  $targetPath = Join-Path $PlatformPath $PluginName
+  $pluginPath = Join-Path $CenterPath $PluginName
+  $pluginSkillsPath = Join-Path $pluginPath "skills"
+  $platformSkillsPath = Join-Path $PlatformPath "skills"
   
-  if (-not (Test-Path $sourcePath)) {
-    return
+  if (-not (Test-Path $pluginSkillsPath)) {
+    return $null
   }
   
-  # 如果已存在，检查是否已经是正确的链接
-  if (Test-Path $targetPath) {
-    $item = Get-Item $targetPath
-    if ($item.LinkType -eq "Junction" -and $item.Target -eq $sourcePath) {
-      return
+  # 确保平台 skills 目录存在
+  if (-not (Test-Path $platformSkillsPath)) {
+    New-Item -ItemType Directory -Force -Path $platformSkillsPath | Out-Null
+  }
+  
+  # 获取插件中的所有技能
+  $skillDirs = Get-ChildItem -Path $pluginSkillsPath -Directory
+  $linkedSkills = @()
+  
+  foreach ($skillDir in $skillDirs) {
+    $skillName = $skillDir.Name
+    $sourcePath = $skillDir.FullName
+    $targetPath = Join-Path $platformSkillsPath $skillName
+    
+    # 如果已存在，检查是否已经是正确的链接
+    if (Test-Path $targetPath) {
+      $item = Get-Item $targetPath
+      if ($item.LinkType -eq "Junction" -and $item.Target -eq $sourcePath) {
+        continue
+      }
+      Remove-Item -Recurse -Force $targetPath
     }
-    Remove-Item -Recurse -Force $targetPath
+    
+    # 创建符号链接
+    try {
+      cmd /c mklink /J "$targetPath" "$sourcePath" | Out-Null
+      $linkedSkills += $skillName
+    } catch {
+      Write-ColorMessage "      ✗ $skillName (失败)" "Red"
+    }
   }
   
-  # 创建符号链接
-  try {
-    cmd /c mklink /J "$targetPath" "$sourcePath" | Out-Null
-    Write-ColorMessage "    ✓ $PlatformName" "Gray"
-  } catch {
-    Write-ColorMessage "    ✗ $PlatformName (失败)" "Red"
-  }
+  return $linkedSkills
 }
 
 # 主逻辑
@@ -164,9 +182,9 @@ if ($syncedPlugins.Count -eq 0) {
   exit 0
 }
 
-# 步骤 2: 链接到各平台
+# 步骤 2: 链接插件的技能到各平台
 Write-ColorMessage "`n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" "Cyan"
-Write-ColorMessage "步骤 2: 链接到各平台" "Yellow"
+Write-ColorMessage "步骤 2: 链接插件技能到各平台" "Yellow"
 Write-ColorMessage "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`n" "Cyan"
 
 $platforms = @(
@@ -175,14 +193,24 @@ $platforms = @(
   @{Name="OpenCode"; Path="$env:USERPROFILE\.openCode"}
 )
 
+$platformStats = @{}
+
 foreach ($pluginName in $syncedPlugins) {
   Write-ColorMessage "  ${pluginName}:" "Cyan"
   
   foreach ($platform in $platforms) {
-    Link-PluginToPlatform -PlatformName $platform.Name `
-                          -PlatformPath $platform.Path `
-                          -PluginName $pluginName `
-                          -CenterPath $pluginCenterFull
+    $linkedSkills = Link-PluginSkillsToPlatform -PlatformName $platform.Name `
+                                                 -PlatformPath $platform.Path `
+                                                 -PluginName $pluginName `
+                                                 -CenterPath $pluginCenterFull
+    
+    if ($linkedSkills -and $linkedSkills.Count -gt 0) {
+      Write-ColorMessage "    ✓ $($platform.Name): $($linkedSkills.Count) 个技能" "Gray"
+      if (-not $platformStats.ContainsKey($platform.Name)) {
+        $platformStats[$platform.Name] = @{}
+      }
+      $platformStats[$platform.Name][$pluginName] = $linkedSkills.Count
+    }
   }
 }
 
@@ -205,9 +233,19 @@ Write-ColorMessage "━━━━━━━━━━━━━━━━━━━━
 Write-ColorMessage "📊 统计:" "Cyan"
 Write-ColorMessage "  • 同步插件数: $($syncedPlugins.Count)" "White"
 Write-ColorMessage "  • 插件中心: $pluginCenterFull" "White"
-Write-ColorMessage "  • 链接平台: Claude, Codex, OpenCode`n" "White"
 
-Write-ColorMessage "📝 下一步:" "Yellow"
-Write-ColorMessage "  1. 重启 AI 工具以加载插件" "White"
+foreach ($platform in $platforms) {
+  if ($platformStats.ContainsKey($platform.Name)) {
+    $totalSkills = ($platformStats[$platform.Name].Values | Measure-Object -Sum).Sum
+    Write-ColorMessage "  • $($platform.Name): $totalSkills 个技能" "White"
+  }
+}
+
+Write-ColorMessage "`n📝 说明:" "Yellow"
+Write-ColorMessage "  • 插件完整存储在: $pluginCenterFull" "White"
+Write-ColorMessage "  • 插件的技能链接到: <平台>/skills/<技能名>" "White"
+Write-ColorMessage "  • 技能可以访问插件的 packages/core 核心包" "White"
+Write-ColorMessage "`n📝 下一步:" "Yellow"
+Write-ColorMessage "  1. 重启 AI 工具以加载插件技能" "White"
 Write-ColorMessage "  2. 运行技能同步: .\setup.ps1" "White"
-Write-ColorMessage "  3. 测试插件功能`n" "White"
+Write-ColorMessage "  3. 测试插件功能（如 /understand）`n" "White"

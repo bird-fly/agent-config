@@ -56,27 +56,36 @@
 │    ├─ agents/                                            │
 │    ├─ hooks/                                             │
 │    ├─ packages/                                          │
+│    │  └─ core/     ← Skills 依赖此核心包                │
 │    └─ skills/                                            │
+│       ├─ understand/                                     │
+│       ├─ understand-chat/                                │
+│       └─ ...                                             │
 └─────────────────────────────────────────────────────────┘
-           │                 │                 │
-      Junction          Junction          Junction
-           ↓                 ↓                 ↓
-┌──────────────────┐ ┌──────────────────┐ ┌──────────────────┐
-│ 平台层: Claude   │ │ 平台层: Codex    │ │ 平台层: OpenCode │
-│ ~/.claude\       │ │ ~/.codex\        │ │ ~/.openCode\     │
-│ ├─ plugins/      │ │ ├─ plugins/      │ │ ├─ plugins/      │
-│ ├─ skills/       │ │ ├─ skills/       │ │ ├─ skills/       │
-│ └─ understand-   │ │ └─ understand-   │ │ └─ understand-   │
-│    anything\     │ │    anything\     │ │    anything\     │
-│    (链接→中心)   │ │    (链接→中心)   │ │    (链接→中心)   │
-└──────────────────┘ └──────────────────┘ └──────────────────┘
+                         │
+                    为每个技能创建链接
+                         ↓
+┌──────────────────────────────────────────────────────────┐
+│ 平台层: Claude / Codex / OpenCode                         │
+│ ~/.claude\ (示例)                                         │
+│ ├─ plugins/      (平台原生插件)                          │
+│ └─ skills/       (技能目录)                              │
+│    ├─ understand/        → Junction 指向中心              │
+│    ├─ understand-chat/   → Junction 指向中心              │
+│    ├─ understand-dashboard/ → Junction 指向中心           │
+│    └─ ...                                                │
+│                                                          │
+│ 链接路径示例:                                             │
+│ skills/understand → .localAIPlugins/understand-anything/ │
+│                     skills/understand                    │
+└──────────────────────────────────────────────────────────┘
 ```
 
-**说明**：
-- 插件安装在平台**根目录**下，不是在 `plugins/` 子目录
-- `plugins/` 是平台原生的插件目录（如 Claude 原生插件）
-- `skills/` 是通过 `setup.ps1` 同步的技能目录
-- `understand-anything/` 是通过插件管理中心链接的完整插件
+**关键点**：
+1. **插件整体**存储在 `.localAIPlugins/understand-anything/`
+2. **每个技能单独链接**到平台的 `skills/` 目录
+3. 技能通过符号链接的相对路径可以访问 `../packages/core/`
+4. 所有平台的技能都指向同一个插件中心，保持版本一致
 
 ## ✅ 优势
 
@@ -134,13 +143,20 @@ cd E:\Project\codexProject\agent-config
 步骤 1: 同步插件到中心
   ✅ understand-anything (符号链接)
 
-步骤 2: 链接到各平台
+步骤 2: 链接插件技能到各平台
   understand-anything:
-    ✓ Claude
-    ✓ Codex
-    ✓ OpenCode
+    ✓ Claude: 8 个技能
+    ✓ Codex: 8 个技能
+    ✓ OpenCode: 8 个技能
 
 ✅ 完成！
+
+📊 统计:
+  • 同步插件数: 1
+  • 插件中心: C:\Users\xxx\.localAIPlugins
+  • Claude: 8 个技能
+  • Codex: 8 个技能
+  • OpenCode: 8 个技能
 ```
 
 #### 步骤 2: 验证安装
@@ -149,16 +165,19 @@ cd E:\Project\codexProject\agent-config
 # 检查插件中心
 ls $env:USERPROFILE\.localAIPlugins
 
-# 检查各平台链接
-ls $env:USERPROFILE\.claude\understand-anything
-ls $env:USERPROFILE\.codex\understand-anything
-ls $env:USERPROFILE\.openCode\understand-anything
+# 检查平台技能链接
+ls $env:USERPROFILE\.claude\skills\understand*
+ls $env:USERPROFILE\.codex\skills\understand*
+ls $env:USERPROFILE\.openCode\skills\understand*
+
+# 验证链接指向
+Get-Item $env:USERPROFILE\.claude\skills\understand | Select-Object Name, LinkType, Target
 ```
 
-#### 步骤 3: 同步技能
+#### 步骤 3: 同步其他技能
 
 ```powershell
-# 技能仍然通过 setup.ps1 同步
+# 同步其他普通技能（非插件技能）
 .\setup.ps1 -Mode Copy
 ```
 
@@ -189,28 +208,31 @@ ls $env:USERPROFILE\.openCode\understand-anything
 
 ```
 %USERPROFILE%\.claude\
-├── plugins\                    # Claude 原生插件目录（保留）
+├── plugins\                    # Claude 原生插件目录
 │   └── cache\
-│       └── understand-anything # 原生安装的插件
-├── skills\                     # 技能目录（setup.ps1 同步）
-│   ├── understand\             # Junction → shared/skills/
-│   ├── understand-chat\
-│   └── ...
-├── understand-anything\        # Junction → .localAIPlugins\understand-anything
-│   ├── agents\                 # 完整插件（通过插件中心）
-│   ├── hooks\
-│   ├── packages\
-│   └── skills\
+│       └── understand-anything # (可选，原生安装的版本)
+├── skills\                     # 技能目录（统一管理）
+│   ├─ understand\             # Junction → .localAIPlugins/understand-anything/skills/understand
+│   ├─ understand-chat\        # Junction → .localAIPlugins/understand-anything/skills/understand-chat
+│   ├─ understand-dashboard\   # Junction → .localAIPlugins/understand-anything/skills/understand-dashboard
+│   ├─ ... (其他插件技能)
+│   ├─ grill-me\               # Junction → shared/skills/grill-me (普通技能)
+│   └─ triage\                 # Junction → shared/skills/triage
 └── CLAUDE.md                   # Prompt 文件
 ```
 
-**注意**：
-- Claude 可能有两个 understand-anything：
-  - `plugins/cache/understand-anything` - 原生安装（可选，可以删除）
-  - `understand-anything` - 插件中心链接（推荐使用）
-- Codex/OpenCode 只有插件中心链接的版本
-- 插件在平台根目录，技能在 `skills/` 子目录
-- **插件包含完整功能**：Skills + Agents + Hooks + Packages + MCP Servers
+**技能链接的相对路径**：
+```
+~/.claude/skills/understand/
+    → ~/.localAIPlugins/understand-anything/skills/understand/
+    → 可访问 ../../packages/core/ (核心包)
+```
+
+**说明**：
+- 插件的技能和普通技能**混合在同一个 skills/ 目录**
+- 插件技能指向 `.localAIPlugins/插件名/skills/技能名`
+- 普通技能指向 `shared/skills/技能名`
+- 通过符号链接保持相对路径，技能可以访问插件的核心包
 
 ## 🔧 高级配置
 
