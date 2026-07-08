@@ -14,14 +14,6 @@
     }
   },
   "skillSyncModes": {
-    "description": "指定特定技能的同步模式（Link 或 Copy）。未指定的技能使用全局 Mode 参数。",
-    "understand": "Link",
-    "understand-chat": "Link",
-    "understand-dashboard": "Link",
-    "understand-diff": "Link",
-    "understand-domain": "Link",
-    "understand-explain": "Link",
-    "understand-knowledge": "Link",
-    "understand-onboard": "Link"
+    "description": "指定特定技能的同步模式（Link 或 Copy）。未指定的技能使用全局 Mode 参数。注意：插件技能（如 understand 系列）通过 sync-plugins.ps1 管理，不需要在此配置。"
   }
 }

@@ -178,6 +178,30 @@ function Assert-ManagedSkillDestination {
   }
 }
 
+function Test-IsPluginSkill {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$SkillPath
+  )
+  
+  if (-not (Test-Path -LiteralPath $SkillPath)) {
+    return $false
+  }
+  
+  $item = Get-Item -LiteralPath $SkillPath
+  if ($item.LinkType -ne "Junction" -and $item.LinkType -ne "SymbolicLink") {
+    return $false
+  }
+  
+  # 检查是否指向 .localAIPlugins（插件中心）
+  $target = $item.Target
+  if (-not $target) {
+    return $false
+  }
+  
+  return $target -like "*\.localAIPlugins\*"
+}
+
 function Assert-SafeSkillsTarget {
   param([Parameter(Mandatory = $true)][string]$Path)
 
@@ -296,6 +320,15 @@ foreach ($clientDir in $clientDirs) {
     Assert-SkillNameMatches -SkillName $skillName -SkillFile $skillFile
 
     $destination = Join-Path $skillsTarget $skillName
+    
+    # 检查是否已存在插件技能（优先级：插件技能 > shared/skills 技能）
+    if (Test-Path -LiteralPath $destination) {
+      if (Test-IsPluginSkill -SkillPath $destination) {
+        Write-Host "⏭️  跳过 $clientName 技能 '$skillName'（插件技能优先）" -ForegroundColor Yellow
+        continue
+      }
+    }
+    
     Assert-ManagedSkillDestination -Destination $destination -SkillName $skillName
     
     # 检查是否为特定技能指定了同步模式
