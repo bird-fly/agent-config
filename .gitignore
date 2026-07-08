@@ -2,3 +2,6 @@ setup.json
 state/*.json
 generated/*
 !generated/.gitkeep
+
+# Ignore git metadata from cloned plugins
+shared/plugins/*/.git/
