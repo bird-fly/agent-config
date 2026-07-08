@@ -1,20 +1,21 @@
-# 🎉 Understand-Anything 插件安装成功！
+# 🎉 Understand-Anything 插件安装完成
 
-## ✅ 已完成
+> 安装日期：2026-07-08 | 最后提交：d87f88d
 
-### 1. 插件安装
-- ✅ 将 [Understand-Anything](https://github.com/Lum1104/Understand-Anything) 作为 **git submodule** 添加到 `shared/plugins/`
-- ✅ 使用 **Junction 符号链接** 连接 8 个技能到 `shared/skills/`
-- ✅ 保留完整插件结构，包含 `packages/core` 核心包
+## ✅ 安装概览
 
-### 2. 多平台同步
-已成功同步到：
-- ✅ **Claude Code** (`~/.claude/skills/`)
-- ✅ **Codex** (`~/.codex/skills/`)
-- ✅ **OpenCode** (`~/.opencode/skills/`)
+### 插件结构
+- **方式**: Git Submodule + Junction 符号链接
+- **位置**: `shared/plugins/understand-anything`
+- **优势**: 保留完整插件（含 `packages/core` 核心包）
 
-### 3. 技能配置
-已在所有三个平台的 `skills.manifest.json` 中添加：
+### 同步状态
+已同步到三个平台：
+- ✅ Claude Code (`~/.claude/skills/`)
+- ✅ Codex (`~/.codex/skills/`)
+- ✅ OpenCode (`~/.opencode/skills/`)
+
+## 📦 8 个技能
 
 | 技能名 | 功能描述 |
 |--------|----------|
@@ -53,91 +54,52 @@
 - ✅ 节省磁盘空间（符号链接而非多次复制）
 - ✅ Git submodule 管理，版本可追溯
 
-## 📖 使用指南
-
-### 快速开始
+## 🚀 快速开始
 
 ```bash
-# 1. 分析当前项目（生成知识图谱）
+# 分析项目生成知识图谱
 /understand
 
-# 2. 打开可视化看板
+# 打开可视化看板
 /understand-dashboard
 
-# 3. 对话式问答
+# 对话式问答
 /understand-chat 认证系统是如何工作的？
-```
 
-### 进阶功能
-
-```bash
-# 生成中文内容
+# 中文输出
 /understand --language zh
-
-# 分析变更影响
-/understand-diff
-
-# 生成入职指南
-/understand-onboard
-
-# 分析业务域
-/understand-domain
 ```
 
 ## 🔄 更新插件
 
 ```powershell
-# 1. 更新 submodule
 cd shared/plugins/understand-anything
 git pull origin main
-
-# 2. 由于使用符号链接，技能自动更新
-# 只需重新同步到本机
 cd ../..
 .\scripts\sync-skills.ps1 -RepoRoot $PWD -Mode Link
 ```
 
-## 📝 相关文档
+## 📖 相关文档
 
-- [Understand Anything 插件文档](docs/UNDERSTAND_ANYTHING_PLUGIN.md) - 完整的安装和使用指南
-- [智能体安装指南](docs/AGENT_INSTALLATION_GUIDE.md) - 插件 vs 技能的区别
+- [完整使用指南](docs/UNDERSTAND_ANYTHING_PLUGIN.md)
 - [官方文档](https://understand-anything.com)
 - [在线演示](https://understand-anything.com/demo/)
 
-## 🚀 下一步
+## ⚠️ 重要提示
 
-1. **首次分析**: 在你的项目中运行 `/understand` 生成知识图谱
-2. **探索看板**: 使用 `/understand-dashboard` 可视化浏览
-3. **提交图谱**: 如果需要团队共享，可以将 `.understand-anything/knowledge-graph.json` 提交到 Git
+- **Token 消耗**: 首次分析消耗大量 tokens，建议使用订阅或本地模型
+- **增量更新**: 后续自动增量，只分析变更文件
+- **构建依赖**: 需要 Node.js ≥ 22 和 pnpm ≥ 10
 
-## ⚠️ 注意事项
+## 💡 常见问题
 
-- **Token 消耗**: 首次分析会消耗大量 tokens（分析整个代码库），建议使用订阅计划或本地模型
-- **增量更新**: 后续运行自动增量更新，只分析变更文件，token 消耗少得多
-- **构建依赖**: 技能首次运行时会自动构建核心包（需要 Node.js ≥ 22 和 pnpm ≥ 10）
+**Q: 技能找不到核心包？**  
+A: 使用符号链接模式：`.\setup.ps1 -Mode Link`
 
-## 🎯 常见问题
-
-### Q: 技能找不到核心包怎么办？
-A: 确保使用了符号链接模式（`-Mode Link`），技能会自动通过相对路径找到核心包。
-
-### Q: 如何在其他项目中使用？
-A: 直接克隆此仓库：
-```bash
-git clone --recursive https://github.com/bird-fly/agent-config
-cd agent-config
-.\setup.ps1 -Mode Link
-```
-
-### Q: 核心包构建失败？
-A: 确保安装了 Node.js ≥ 22 和 pnpm ≥ 10：
-```bash
-node --version
-pnpm --version
-```
+**Q: 核心包构建失败？**  
+A: 检查依赖：`node --version` 和 `pnpm --version`
 
 ---
 
-**安装完成时间**: 2026-07-08  
-**最后提交**: c78a744  
-**仓库**: https://github.com/bird-fly/agent-config
+📌 **详细文档**: [docs/UNDERSTAND_ANYTHING_PLUGIN.md](docs/UNDERSTAND_ANYTHING_PLUGIN.md)  
+🔗 **仓库**: https://github.com/bird-fly/agent-config
