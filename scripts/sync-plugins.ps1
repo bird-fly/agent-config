@@ -6,6 +6,9 @@ param(
   [string]$PluginCenterPath = "$env:USERPROFILE\.localAIPlugins",
   
   [Parameter(Mandatory = $false)]
+  [string]$ConfigPath = $null,
+  
+  [Parameter(Mandatory = $false)]
   [ValidateSet("Link", "Copy")]
   [string]$Mode = "Link"
 )
@@ -19,6 +22,42 @@ function Write-ColorMessage {
     [string]$Color = "White"
   )
   Write-Host $Message -ForegroundColor $Color
+}
+
+function Read-PluginConfig {
+  param([string]$ConfigPath)
+  
+  if (-not $ConfigPath -or -not (Test-Path $ConfigPath)) {
+    return $null
+  }
+  
+  try {
+    $config = Get-Content -Raw -Path $ConfigPath | ConvertFrom-Json
+    return $config.plugins
+  } catch {
+    Write-ColorMessage "⚠️  无法读取插件配置: $ConfigPath" "Yellow"
+    return $null
+  }
+}
+
+function Test-PluginEnabled {
+  param(
+    [string]$PluginName,
+    [object]$PluginConfig
+  )
+  
+  if (-not $PluginConfig) {
+    return $true  # 没有配置，默认启用
+  }
+  
+  # 检查是否有该插件的配置
+  $pluginSetting = $PluginConfig.PSObject.Properties[$PluginName]
+  if (-not $pluginSetting) {
+    return $true  # 未配置，默认启用
+  }
+  
+  # 返回配置值
+  return $pluginSetting.Value -eq $true
 }
 
 function Sync-PluginToCenter {
@@ -132,6 +171,21 @@ $repoRootFull = [System.IO.Path]::GetFullPath($RepoRoot)
 $pluginsSourceDir = Join-Path $repoRootFull "shared\plugins"
 $pluginCenterFull = [System.IO.Path]::GetFullPath($PluginCenterPath)
 
+# 读取插件配置
+if (-not $ConfigPath) {
+  $localConfig = Join-Path $repoRootFull "setup.json"
+  if (Test-Path $localConfig) {
+    $ConfigPath = $localConfig
+  } else {
+    $ConfigPath = Join-Path $repoRootFull "setup.example.json"
+  }
+}
+
+$pluginConfig = Read-PluginConfig -ConfigPath $ConfigPath
+if ($pluginConfig) {
+  Write-ColorMessage "📝 使用插件配置: $ConfigPath" "Gray"
+}
+
 # 创建插件中心目录
 if (-not (Test-Path $pluginCenterFull)) {
   Write-ColorMessage "📁 创建插件中心: $pluginCenterFull" "Cyan"
@@ -153,10 +207,18 @@ if (-not (Test-Path $pluginsSourceDir)) {
 }
 
 $syncedPlugins = @()
+$skippedPlugins = @()
 $pluginDirs = Get-ChildItem -Path $pluginsSourceDir -Directory
 
 foreach ($pluginDir in $pluginDirs) {
   $pluginName = $pluginDir.Name
+  
+  # 检查插件是否启用
+  if (-not (Test-PluginEnabled -PluginName $pluginName -PluginConfig $pluginConfig)) {
+    Write-ColorMessage "  ⏭️  跳过: $pluginName（已禁用）" "Yellow"
+    $skippedPlugins += $pluginName
+    continue
+  }
   
   # 对于 understand-anything，使用内部的 understand-anything-plugin 目录
   $sourcePath = $pluginDir.FullName
@@ -232,6 +294,9 @@ Write-ColorMessage "━━━━━━━━━━━━━━━━━━━━
 
 Write-ColorMessage "📊 统计:" "Cyan"
 Write-ColorMessage "  • 同步插件数: $($syncedPlugins.Count)" "White"
+if ($skippedPlugins.Count -gt 0) {
+  Write-ColorMessage "  • 跳过插件数: $($skippedPlugins.Count) ($($skippedPlugins -join ', '))" "Yellow"
+}
 Write-ColorMessage "  • 插件中心: $pluginCenterFull" "White"
 
 foreach ($platform in $platforms) {
@@ -245,6 +310,9 @@ Write-ColorMessage "`n📝 说明:" "Yellow"
 Write-ColorMessage "  • 插件完整存储在: $pluginCenterFull" "White"
 Write-ColorMessage "  • 插件的技能链接到: <平台>/skills/<技能名>" "White"
 Write-ColorMessage "  • 技能可以访问插件的 packages/core 核心包" "White"
+if ($pluginConfig) {
+  Write-ColorMessage "  • 可在 setup.json 的 plugins 配置中启用/禁用插件" "Cyan"
+}
 Write-ColorMessage "`n📝 下一步:" "Yellow"
 Write-ColorMessage "  1. 重启 AI 工具以加载插件技能" "White"
 Write-ColorMessage "  2. 运行技能同步: .\setup.ps1" "White"
