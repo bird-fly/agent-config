@@ -247,6 +247,12 @@ function Remove-ManifestExcludedSkills {
       continue
     }
 
+    # 检查是否为插件技能（不删除插件技能）
+    if (Test-IsPluginSkill -SkillPath $localSkillDir.FullName) {
+      Write-Host "⏭️  保留 $clientName 插件技能 '$($localSkillDir.Name)'（不在 manifest 中，但来自插件中心）" -ForegroundColor Cyan
+      continue
+    }
+
     $localSkillFile = Join-Path $localSkillDir.FullName "SKILL.md"
     if (-not (Test-Path -LiteralPath $localSkillFile)) {
       Write-Host "Skipping $clientName manifest-excluded non-skill directory '$($localSkillDir.Name)'."
