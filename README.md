@@ -26,9 +26,14 @@
 git clone --recursive https://github.com/bird-fly/agent-config.git
 cd agent-config
 
-# 首次设置（自动生成 prompt 并同步技能）
+# 安装 Understand-Anything 完整插件（Codex/OpenCode）
+.\scripts\install-understand-plugin.ps1 -Platform all
+
+# 首次设置（生成 prompt 并同步技能）
 .\setup.ps1 -Mode Copy
 ```
+
+**Claude Code 用户**: 使用 `/plugin install understand-anything` 安装插件，然后运行 `.\setup.ps1`
 
 ### 日常使用
 
@@ -296,9 +301,9 @@ node scripts\analyze-skills.js
 
 所有文档位于 [`docs/`](docs/) 目录：
 
-- [技能同步模式配置](docs/SKILL_SYNC_MODES.md) ⭐ 新功能
+- [技能同步模式配置](docs/SKILL_SYNC_MODES.md) ⭐
+- [Understand 插件完整安装](docs/UNDERSTAND_ANYTHING_PLUGIN.md) ⭐ 更新
 - [Understand 插件安装总结](docs/INSTALLATION_SUMMARY.md)
-- [Understand 插件详细文档](docs/UNDERSTAND_ANYTHING_PLUGIN.md)
 - [智能体 vs 插件 vs 技能](docs/AGENT_INSTALLATION_GUIDE.md)
 - [常用命令速查](docs/COMMANDS.md)
 

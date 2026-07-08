@@ -63,39 +63,46 @@ Understand Anything 是一个 **Plugin（插件系统）**，而不是单个 Ski
 
 ## 安装方式
 
-### 方案 A：符号链接模式（推荐）
+### 完整插件安装（推荐）
 
-✅ **优点**: 
-- 保留完整插件结构（包含核心包）
-- 更新插件时自动同步所有技能
-- 节省磁盘空间
+Understand-Anything 不仅仅是技能，是一个**完整插件**，包含：
+- ✅ **Skills** (8个) - 用户调用的命令
+- ✅ **Agents** (9个) - 子智能体（project-scanner, file-analyzer 等）
+- ✅ **Hooks** (2个) - 自动更新钩子
+- ✅ **Packages/Core** - 核心包
 
-```powershell
-# 1. 克隆完整插件到 shared/plugins
-cd shared/plugins
-git clone https://github.com/Lum1104/Understand-Anything.git understand-anything
+**必须安装完整插件才能使用所有功能！**
 
-# 2. 为所有技能创建符号链接
-$pluginSkillsPath = "shared/plugins/understand-anything/understand-anything-plugin/skills"
-$targetPath = "shared/skills"
-Get-ChildItem $pluginSkillsPath -Directory | ForEach-Object {
-    cmd /c mklink /J "$targetPath\$($_.Name)" $_.FullName
-}
-
-# 3. 更新配置文件
-# 在 clients/{claude,codex,openCode}/skills.manifest.json 中添加所有 understand-* 技能
-
-# 4. 同步到本机（使用Link模式保持符号链接）
-.\scripts\sync-skills.ps1 -RepoRoot $PWD -Mode Link
-```
-
-### 方案 B：复制模式
-
-⚠️ **缺点**: 会丢失插件核心包，技能可能无法正常工作
+#### Claude Code
 
 ```powershell
-# 不推荐此方式！技能依赖 packages/core 核心包
+# Claude Code 原生支持插件
+# 通过 Claude Code 内置命令安装
+/plugin marketplace add Egonex-AI/Understand-Anything
+/plugin install understand-anything
+
+# 然后同步技能（使用仓库版本覆盖）
+cd E:\Project\codexProject\agent-config
+.\setup.ps1 -Mode Copy
 ```
+
+#### Codex / OpenCode
+
+```powershell
+# 1. 安装完整插件（agents、hooks、packages）
+cd E:\Project\codexProject\agent-config
+.\scripts\install-understand-plugin.ps1 -Platform all
+
+# 2. 同步技能
+.\setup.ps1 -Mode Copy
+
+# 3. 重启 Codex/OpenCode
+```
+
+**说明**:
+- `install-understand-plugin.ps1` 将完整插件安装到 `~/.codex/understand-anything`
+- `setup.ps1` 同步技能到 `~/.codex/skills/understand*`
+- 两者配合使用，功能完整
 
 ## 使用示例
 
