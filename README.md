@@ -220,7 +220,7 @@ node scripts\analyze-skills.js
 /understand-chat 认证流程是如何工作的？
 ```
 
-📖 [完整文档](docs/UNDERSTAND_ANYTHING_PLUGIN.md)
+📖 [详细文档](docs/UNDERSTAND_ANYTHING_PLUGIN.md) | [安装总结](docs/INSTALLATION_SUMMARY.md)
 
 ### 2. 技能来源查询
 
@@ -263,10 +263,12 @@ node scripts\analyze-skills.js
 
 ## 📚 文档
 
-- [INSTALLATION_SUMMARY.md](INSTALLATION_SUMMARY.md) - Understand 插件安装总结
-- [docs/UNDERSTAND_ANYTHING_PLUGIN.md](docs/UNDERSTAND_ANYTHING_PLUGIN.md) - Understand 插件详细文档
-- [docs/AGENT_INSTALLATION_GUIDE.md](docs/AGENT_INSTALLATION_GUIDE.md) - 智能体 vs 插件 vs 技能
-- [COMMANDS.md](COMMANDS.md) - 常用命令速查
+所有文档位于 [`docs/`](docs/) 目录：
+
+- [Understand 插件安装总结](docs/INSTALLATION_SUMMARY.md)
+- [Understand 插件详细文档](docs/UNDERSTAND_ANYTHING_PLUGIN.md)
+- [智能体 vs 插件 vs 技能](docs/AGENT_INSTALLATION_GUIDE.md)
+- [常用命令速查](docs/COMMANDS.md)
 
 ---
 
