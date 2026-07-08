@@ -278,6 +278,9 @@ foreach ($clientDir in $clientDirs) {
   $skillState = [ordered]@{}
   $manifestSkillNames = @($manifest.skills)
 
+  # 获取 skillSyncModes 配置
+  $skillSyncModes = Get-ObjectProperty -Object $config -Name "skillSyncModes"
+
   Remove-ManifestExcludedSkills -SkillsTarget $skillsTarget -ManifestSkillNames $manifestSkillNames -ClientName $clientName
 
   foreach ($skillName in $manifestSkillNames) {
@@ -294,10 +297,20 @@ foreach ($clientDir in $clientDirs) {
 
     $destination = Join-Path $skillsTarget $skillName
     Assert-ManagedSkillDestination -Destination $destination -SkillName $skillName
-    $result = & $linkOrCopyScript -Source $source -Destination $destination -Mode $Mode
+    
+    # 检查是否为特定技能指定了同步模式
+    $skillMode = $Mode
+    if ($skillSyncModes) {
+      $specificMode = Get-ObjectProperty -Object $skillSyncModes -Name $skillName
+      if ($specificMode -and ($specificMode -eq "Link" -or $specificMode -eq "Copy")) {
+        $skillMode = $specificMode
+      }
+    }
+    
+    $result = & $linkOrCopyScript -Source $source -Destination $destination -Mode $skillMode
     $modeUsed = ($result | Select-Object -Last 1).mode
     if (-not $modeUsed) {
-      $modeUsed = $Mode
+      $modeUsed = $skillMode
     }
 
     $skillState[$skillName] = [ordered]@{

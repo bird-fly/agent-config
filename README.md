@@ -4,7 +4,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![技能数量](https://img.shields.io/badge/技能-41个-blue.svg)](#技能列表)
-[![平台支持](https://img.shields.io/badge/平台-Claude%20%7C%20Codex%20%7C%20OpenCode-green.svg)](#支持的平台)
+[![平台支持](<https://img.shields.io/badge/平台-Claude%20%7C%20Codex%20%7C%20OpenCode-green.svg>)](#支持的平台)
 
 ---
 
@@ -36,6 +36,10 @@ cd agent-config
 # 修改规则或技能后，重新同步
 .\setup.ps1 -Mode Copy
 
+# 使用配置文件指定每个技能的同步模式
+# 编辑 setup.json，在 skillSyncModes 中配置
+.\setup.ps1
+
 # 检查配置状态
 .\scripts\doctor.ps1 -RepoRoot .
 
@@ -45,6 +49,29 @@ cd agent-config
 # 交互式查询
 .\scripts\skill-source.ps1 -Interactive
 ```
+
+### 技能同步模式配置
+
+你可以为每个技能单独指定同步模式（Link 或 Copy）：
+
+```json
+// setup.json
+{
+  "clients": { ... },
+  "skillSyncModes": {
+    "understand": "Link",        // Understand 系列必须用 Link
+    "understand-chat": "Link",
+    "grill-me": "Copy",           // 普通技能可以用 Copy
+    "triage": "Copy"
+  }
+}
+```
+
+**推荐配置**:
+- ✅ **Understand 系列**: 使用 `Link`（必须，因为依赖核心包）
+- ✅ **其他技能**: 使用 `Copy`（更稳定）
+
+📖 [详细说明](docs/SKILL_SYNC_MODES.md)
 
 ---
 
@@ -91,6 +118,7 @@ agent-config/
 ## 🎨 技能列表
 
 ### 📊 总览
+
 - **总技能数**: 41 个
 - **Matt Pocock 系列**: 6 个
 - **Understand 系列**: 8 个
@@ -99,20 +127,21 @@ agent-config/
 
 ### 🔥 热门技能
 
-| 技能 | 分类 | 描述 |
-|------|------|------|
-| `understand` | 代码分析 | 生成代码库知识图谱 |
-| `understand-dashboard` | 代码分析 | 交互式可视化看板 |
-| `grill-with-docs` | 工程 | 带文档的代码审查 |
-| `triage` | 工程 | Issue 分流状态机 |
-| `prototype` | 工程 | 快速构建原型 |
-| `tdd` | 工程 | 测试驱动开发 |
-| `ask-matt` | 生产力 | 技能路由器 |
-| `research` | 生产力 | 调研并生成文档 |
-| `teach` | 生产力 | 多会话教学 |
-| `last30days` | 研究 | 研究过去30天的讨论 |
+| 技能                     | 分类     | 描述               |
+| ------------------------ | -------- | ------------------ |
+| `understand`           | 代码分析 | 生成代码库知识图谱 |
+| `understand-dashboard` | 代码分析 | 交互式可视化看板   |
+| `grill-with-docs`      | 工程     | 带文档的代码审查   |
+| `triage`               | 工程     | Issue 分流状态机   |
+| `prototype`            | 工程     | 快速构建原型       |
+| `tdd`                  | 工程     | 测试驱动开发       |
+| `ask-matt`             | 生产力   | 技能路由器         |
+| `research`             | 生产力   | 调研并生成文档     |
+| `teach`                | 生产力   | 多会话教学         |
+| `last30days`           | 研究     | 研究过去30天的讨论 |
 
 **查看完整列表**:
+
 ```powershell
 # 按来源分组查看
 .\scripts\skill-source.ps1 -BySource
@@ -128,20 +157,21 @@ node scripts\analyze-skills.js
 ### 修改规则
 
 1. 编辑共享规则：
+
    ```
    shared/rules/core.md
    shared/rules/workflow.md
    shared/rules/frontend-design.md
    ```
-
 2. 或编辑客户端专属规则：
+
    ```
    clients/claude/rules/claude.md
    clients/codex/rules/codex.md
    clients/openCode/rules/openCode.md
    ```
-
 3. 重新同步：
+
    ```powershell
    .\setup.ps1 -Mode Copy
    ```
@@ -149,8 +179,8 @@ node scripts\analyze-skills.js
 ### 添加新技能
 
 1. 将技能添加到 `shared/skills/<skill-name>/`
-
 2. 更新客户端清单：
+
    ```json
    // clients/claude/skills.manifest.json
    {
@@ -160,8 +190,8 @@ node scripts\analyze-skills.js
      ]
    }
    ```
-
 3. 同步到本机：
+
    ```powershell
    .\setup.ps1 -Mode Copy
    ```
@@ -209,6 +239,7 @@ node scripts\analyze-skills.js
 - 👥 **understand-onboard** - 新人入职指南
 
 **使用**:
+
 ```bash
 # 分析项目
 /understand
@@ -253,11 +284,11 @@ node scripts\analyze-skills.js
 
 ## 🖥️ 支持的平台
 
-| 平台 | 状态 | Prompt 路径 | 技能路径 |
-|------|------|------------|----------|
-| **Claude Code** | ✅ 支持 | `~/.claude/CLAUDE.md` | `~/.claude/skills/` |
-| **Codex** | ✅ 支持 | `~/.codex/AGENTS.md` | `~/.codex/skills/` |
-| **OpenCode** | ✅ 支持 | `~/.openCode/AGENTS.md` | `~/.opencode/skills/` |
+| 平台                  | 状态    | Prompt 路径               | 技能路径                |
+| --------------------- | ------- | ------------------------- | ----------------------- |
+| **Claude Code** | ✅ 支持 | `~/.claude/CLAUDE.md`   | `~/.claude/skills/`   |
+| **Codex**       | ✅ 支持 | `~/.codex/AGENTS.md`    | `~/.codex/skills/`    |
+| **OpenCode**    | ✅ 支持 | `~/.openCode/AGENTS.md` | `~/.opencode/skills/` |
 
 ---
 
@@ -265,6 +296,7 @@ node scripts\analyze-skills.js
 
 所有文档位于 [`docs/`](docs/) 目录：
 
+- [技能同步模式配置](docs/SKILL_SYNC_MODES.md) ⭐ 新功能
 - [Understand 插件安装总结](docs/INSTALLATION_SUMMARY.md)
 - [Understand 插件详细文档](docs/UNDERSTAND_ANYTHING_PLUGIN.md)
 - [智能体 vs 插件 vs 技能](docs/AGENT_INSTALLATION_GUIDE.md)
@@ -328,6 +360,6 @@ MIT License - 详见 [LICENSE](LICENSE)
 
 ---
 
-**最后更新**: 2026-07-08  
-**仓库**: https://github.com/bird-fly/agent-config  
+**最后更新**: 2026-07-08
+**仓库**: https://github.com/bird-fly/agent-config
 **技能数**: 41 个
