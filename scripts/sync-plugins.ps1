@@ -121,6 +121,11 @@ function Link-PluginSkillsToPlatform {
   $pluginSkillsPath = Join-Path $pluginPath "skills"
   $platformSkillsPath = Join-Path $PlatformPath "skills"
   
+  # 特殊处理 jd-multica-skills：skills 直接在根目录下
+  if ($PluginName -eq "jd-multica-skills") {
+    $pluginSkillsPath = $pluginPath
+  }
+  
   if (-not (Test-Path $pluginSkillsPath)) {
     return $null
   }
@@ -132,6 +137,12 @@ function Link-PluginSkillsToPlatform {
   
   # 获取插件中的所有技能
   $skillDirs = Get-ChildItem -Path $pluginSkillsPath -Directory
+  
+  # 特殊处理 jd-multica-skills：过滤掉非 skill 目录
+  if ($PluginName -eq "jd-multica-skills") {
+    $skillDirs = $skillDirs | Where-Object { $_.Name -like "multica-*" }
+  }
+  
   $linkedSkills = @()
   
   foreach ($skillDir in $skillDirs) {

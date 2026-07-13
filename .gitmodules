@@ -1,3 +1,7 @@
 [submodule "shared/plugins/understand-anything"]
 	path = shared/plugins/understand-anything
 	url = https://github.com/Lum1104/Understand-Anything.git
+[submodule "shared/plugins/jd-multica-skills"]
+	path = shared/plugins/jd-multica-skills
+	url = http://192.168.168.235:18980/smart/jd-multica-skills.git
+	branch = test

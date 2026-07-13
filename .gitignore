@@ -5,3 +5,4 @@ generated/*
 
 # Ignore git metadata from cloned plugins
 shared/plugins/*/.git/
+.history
